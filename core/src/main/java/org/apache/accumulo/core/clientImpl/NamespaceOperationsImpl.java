@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.IteratorSetting;
@@ -47,6 +48,7 @@ import org.apache.accumulo.core.client.admin.TableOperations;
 import org.apache.accumulo.core.clientImpl.thrift.SecurityErrorCode;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftTableOperationException;
+import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.constraints.Constraint;
 import org.apache.accumulo.core.data.NamespaceId;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
@@ -170,17 +172,31 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     doNamespaceFateOperation(FateOperation.NAMESPACE_RENAME, args, opts, oldNamespaceName);
   }
 
+  private boolean validProperty(final String property, final String value) {
+    if (!property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      return true;
+    return Property.isValidHdfsPolicy(property, value);
+  }
+
   @Override
   public void setProperty(final String namespace, final String property, final String value)
       throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     checkArgument(namespace != null, "namespace is null");
     checkArgument(property != null, "property is null");
     checkArgument(value != null, "value is null");
+    checkArgument(validProperty(property, value), "improper value for property");
 
     MasterClient.executeNamespace(context,
         client -> client.setNamespaceProperty(TraceUtil.traceInfo(), context.rpcCreds(), namespace,
             property, value));
     checkLocalityGroups(namespace, property);
+
+    // if the storage or encoding policy was changed, send message to update
+    // table directories. if policy is invalid, we'll wind up with
+    // bad data in zookeeper, but the operation should finish with a
+    // warning message. user will have to try again and correct error.
+    if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      propertyChanged(namespace, property, value);
   }
 
   @Override
@@ -192,6 +208,26 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     MasterClient.executeNamespace(context, client -> client
         .removeNamespaceProperty(TraceUtil.traceInfo(), context.rpcCreds(), namespace, property));
     checkLocalityGroups(namespace, property);
+
+    // if the storage or encoding policy was changed, send message to update
+    // table directories
+    if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      propertyChanged(namespace, property, null);
+  }
+
+  private void propertyChanged(final String namespace, final String propChanged, final String value)
+      throws AccumuloSecurityException, NamespaceNotFoundException, AccumuloException {
+    List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(namespace.getBytes(UTF_8)),
+        ByteBuffer.wrap(propChanged.getBytes(UTF_8)),
+        ByteBuffer.wrap((value == null ? Constants.PROPERTY_REMOVED : value).getBytes(UTF_8)));
+    Map<String,String> opts = new HashMap<>();
+
+    try {
+      doNamespaceFateOperation(FateOperation.NAMESPACE_PROPERTY_CHANGE, args, opts, namespace);
+    } catch (NamespaceExistsException e) {
+      // should not happen
+      throw new AssertionError(e);
+    }
   }
 
   @Override

@@ -165,8 +165,12 @@ public class BulkImport extends MasterRepo {
     String tableDir = tempPath.toString();
     if (tableDir == null)
       throw new IOException(sourceDir + " is not in a volume configured for Accumulo");
+
+    // need to get storage and ec policies for table
+    var policies = Utils.getPoliciesForTable(context.getServerConfFactory(), tableId);
+
     Path directory = new Path(tableDir + "/" + tableId);
-    fs.mkdirs(directory);
+    fs.mkdirs(directory, policies.storagePolicy, policies.encodingPolicy);
 
     // only one should be able to create the lock file
     // the purpose of the lock file is to avoid a race
@@ -180,7 +184,8 @@ public class BulkImport extends MasterRepo {
       Path newBulkDir = new Path(directory, Constants.BULK_PREFIX + namer.getNextName());
       if (fs.exists(newBulkDir)) // sanity check
         throw new IOException("Dir exist when it should not " + newBulkDir);
-      if (fs.mkdirs(newBulkDir))
+      // children should inherit policy, but setting explicitly just in case
+      if (fs.mkdirs(newBulkDir, policies.storagePolicy, policies.encodingPolicy))
         return newBulkDir;
       log.warn("Failed to create {} for unknown reason", newBulkDir);
 

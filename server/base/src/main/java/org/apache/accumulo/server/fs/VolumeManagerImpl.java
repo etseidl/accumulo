@@ -19,6 +19,9 @@
 package org.apache.accumulo.server.fs;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.ALLSSD_STORAGE_POLICY_NAME;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.COLD_STORAGE_POLICY_NAME;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HOT_STORAGE_POLICY_NAME;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,6 +34,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.conf.Property;
@@ -44,6 +48,7 @@ import org.apache.accumulo.core.volume.VolumeConfiguration;
 import org.apache.accumulo.server.fs.VolumeChooser.VolumeChooserException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -56,6 +61,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -307,6 +313,111 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   @Override
+  public boolean mkdirs(Path path, String storagePolicy, String encoding) throws IOException {
+    boolean ret = mkdirs(path);
+    try {
+      checkDirPolicies(path, storagePolicy, encoding);
+    } catch (IOException e) {
+      // non-fatal error, just print warning and continue
+      // directory will just have wrong policy.
+      log.warn("error checking policy for " + path, e);
+    }
+    return ret;
+  }
+
+  @Override
+  public void checkDirPolicies(Path path, String storagePolicy, String encoding)
+      throws IOException {
+    FileSystem fs = getVolumeByPath(path).getFileSystem();
+    // check that path exists...it may not yet, which is ok. just return
+    if (!fs.exists(path)) {
+      log.debug("check {}: path does not exist", path);
+      return;
+    }
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      BlockStoragePolicySpi currPolicy = dfs.getStoragePolicy(path);
+      ErasureCodingPolicy currEC = dfs.getErasureCodingPolicy(path);
+
+      log.debug("check {}: ec is {} want {}", path, currEC, encoding);
+      log.debug("check {}: sp is {} want {}", path, currPolicy, storagePolicy);
+
+      // sanity checking...if encoding is not replication, then only a few
+      // storage policies make sense, per the HDFS documentation.
+      if (encoding != null && !encoding.equals(Constants.HDFS_REPLICATION)) {
+        // storage policy can only be HOT, COLD, or ALL_SSD. mixed types
+        // don't make sense with EC.
+        if (!storagePolicy.equals(HOT_STORAGE_POLICY_NAME)
+            && !storagePolicy.equals(COLD_STORAGE_POLICY_NAME)
+            && !storagePolicy.equals(ALLSSD_STORAGE_POLICY_NAME)) {
+          log.error("invalid storage policy {} with erasure coded directory", storagePolicy);
+          // FIXME should this throw exception or just return?
+          // throw new IOException("invalid storage policy");
+          return;
+        }
+      }
+
+      // see if they differ, if they do set to new. how to set to repl if already EC?
+      // currEC == null is replication, encoding null or Constants.HDFS_REPLICATION is replication
+      if (currEC == null) {
+        if (encoding != null && !encoding.equals(Constants.HDFS_REPLICATION)) {
+          log.debug("set EC to {} from replication for path {}", encoding, path);
+          dfs.setErasureCodingPolicy(path, encoding);
+        }
+      } else if (encoding == null || encoding.equals(Constants.HDFS_REPLICATION)) {
+        log.debug("set EC to replication from {} for path {}", currEC.getName(), path);
+        dfs.setErasureCodingPolicy(path, ErasureCodeConstants.REPLICATION_POLICY_NAME);
+      } else {
+        if (!encoding.equals(currEC.getName())) {
+          log.debug("set EC to {} from {} for path {}", encoding, currEC.getName(), path);
+          dfs.setErasureCodingPolicy(path, encoding);
+        }
+      }
+
+      // currPolicy == null is default
+      if (currPolicy == null) {
+        if (storagePolicy != null) {
+          log.debug("set SP to {} from none for path {}", storagePolicy, path);
+          dfs.setStoragePolicy(path, storagePolicy);
+        }
+      } else if (storagePolicy == null) {
+        log.debug("set SP to none from {} for path {}", currPolicy.getName(), path);
+        dfs.setStoragePolicy(path, null);
+      } else if (!storagePolicy.equals(currPolicy.getName())) {
+        log.debug("set SP to {} from {} for path {}", storagePolicy, currPolicy.getName(), path);
+        dfs.setStoragePolicy(path, storagePolicy);
+      }
+    }
+  }
+
+  @Override
+  public void checkDirPoliciesRecursively(Path path, String storagePolicy, String encoding)
+      throws IOException {
+    FileSystem fs = getVolumeByPath(path).getFileSystem();
+    // check that path exists...it may not yet, which is ok. just return
+    if (!fs.exists(path)) {
+      log.debug("check {}: path does not exist", path);
+      return;
+    }
+
+    // only need to do checks if HDFS
+    if (fs instanceof DistributedFileSystem) {
+      // check toplevel
+      checkDirPolicies(path, storagePolicy, encoding);
+
+      // and then check children
+      // TODO does the directory tree for a table ever get more than one level deep?
+      log.debug("check recursively {}", path);
+      var fstats = fs.listStatus(path);
+      for (FileStatus fstat : fstats) {
+        if (fstat.isDirectory()) {
+          checkDirPolicies(fstat.getPath(), storagePolicy, encoding);
+        }
+      }
+    }
+  }
+
+  @Override
   public FSDataInputStream open(Path path) throws IOException {
     return getVolumeByPath(path).getFileSystem().open(path);
   }
@@ -544,4 +655,5 @@ public class VolumeManagerImpl implements VolumeManager {
   public Collection<Volume> getVolumes() {
     return volumesByName.values();
   }
+
 }
