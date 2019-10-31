@@ -967,6 +967,11 @@ public class TableOperationsImpl extends TableOperationsHelper {
       setPropertyNoChecks(tableName, property, value);
 
       checkLocalityGroups(tableName, property);
+
+      // if the storage or encoding policy was changed, send message to update
+      // table directories
+      if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+        propertyChanged(tableName, property);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -988,6 +993,11 @@ public class TableOperationsImpl extends TableOperationsHelper {
       removePropertyNoChecks(tableName, property);
 
       checkLocalityGroups(tableName, property);
+
+      // if the storage or encoding policy was changed, send message to update
+      // table directories
+      if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+        propertyChanged(tableName, property);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -1013,6 +1023,21 @@ public class TableOperationsImpl extends TableOperationsHelper {
             + "order may help.  Even though this warning was displayed, the property was updated. "
             + "Please check your config to ensure consistency.", e);
       }
+    }
+  }
+
+  private void propertyChanged(String tableName, String propChanged)
+      throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
+    List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(tableName.getBytes(UTF_8)),
+        ByteBuffer.wrap(propChanged.getBytes(UTF_8)));
+    Map<String,String> opts = new HashMap<>();
+
+    try {
+      doTableFateOperation(tableName, TableNotFoundException.class,
+          FateOperation.TABLE_PROPERTY_CHANGE, args, opts);
+    } catch (TableExistsException e) {
+      // should not happen
+      throw new AssertionError(e);
     }
   }
 

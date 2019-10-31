@@ -189,6 +189,11 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
         client -> client.setNamespaceProperty(TraceUtil.traceInfo(), context.rpcCreds(), namespace,
             property, value));
     checkLocalityGroups(namespace, property);
+
+    // if the storage or encoding policy was changed, send message to update
+    // table directories
+    if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      propertyChanged(namespace, property);
   }
 
   @Override
@@ -200,6 +205,25 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     MasterClient.executeNamespace(context, client -> client
         .removeNamespaceProperty(TraceUtil.traceInfo(), context.rpcCreds(), namespace, property));
     checkLocalityGroups(namespace, property);
+
+    // if the storage or encoding policy was changed, send message to update
+    // table directories
+    if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      propertyChanged(namespace, property);
+  }
+
+  private void propertyChanged(String namespace, String propChanged)
+      throws AccumuloSecurityException, NamespaceNotFoundException, AccumuloException {
+    List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(namespace.getBytes(UTF_8)),
+        ByteBuffer.wrap(propChanged.getBytes(UTF_8)));
+    Map<String,String> opts = new HashMap<>();
+
+    try {
+      doNamespaceFateOperation(FateOperation.NAMESPACE_PROPERTY_CHANGE, args, opts, namespace);
+    } catch (NamespaceExistsException e) {
+      // should not happen
+      throw new AssertionError(e);
+    }
   }
 
   @Override

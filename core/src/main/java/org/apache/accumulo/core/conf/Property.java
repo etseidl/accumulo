@@ -855,6 +855,30 @@ public enum Property {
           + "configuration.  'RS-6-3-64k' seems to be a good balance between scan performance and "
           + "random seek latency."),
 
+  TABLE_HDFS_POLICY_PREFIX("table.hdfs.policy.", null, PropertyType.PREFIX,
+      "Properties in this category are used to configure HDFS directory policies."),
+  TABLE_STORAGE_POLICY("table.hdfs.policy.storage", HdfsConstants.HOT_STORAGE_POLICY_NAME,
+      PropertyType.STRING,
+      "HDFS Storage policy to apply to the directory tree holding the tablets for the "
+          + "table.  Can be one of " + HdfsConstants.HOT_STORAGE_POLICY_NAME + ", "
+          + HdfsConstants.WARM_STORAGE_POLICY_NAME + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME
+          + ", " + HdfsConstants.ONESSD_STORAGE_POLICY_NAME + ", "
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + ". "
+          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME
+          + " is also available, but since it cannot guarantee data is written to disk in the event "
+          + "of a power failure, it is not recommended for use.  There is also some confusion"
+          + "in the documentation about the performance of "
+          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME + " when more than one "
+          + "replicant is specified.  Also note, that only " + HdfsConstants.HOT_STORAGE_POLICY_NAME
+          + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME + ", and "
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + " make sense when using erasure coding."),
+  TABLE_CODING_POLICY("table.hdfs.policy.encoding", Constants.HDFS_REPLICATION, PropertyType.STRING,
+      "The HDFS erasure coding (EC) policy to apply to the directory tree holding the tablets "
+          + "for the table.  The default of 'replication' uses standard HDFS block replication, "
+          + "subject to defaults set elsewhere.  Other policies will vary depending on the HDFS "
+          + "configuration.  RS-6-3-64k seems to be a good balance between scan performance and "
+          + "random seek latency."),
+
   // VFS ClassLoader properties
 
   // this property shouldn't be used directly; it exists solely to document the default value
