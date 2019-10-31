@@ -144,6 +144,18 @@ public interface VolumeManager {
   boolean mkdirs(Path path, FsPermission permission) throws IOException;
 
   // forward to the appropriate FileSystem object
+  boolean mkdirs(Path path, String storagePolicy, String encoding) throws IOException;
+
+  // check and correct storage policy and encoding for path if supported
+  // by underlying FileSystem
+  void checkDirPolicies(Path path, String storagePolicy, String encoding) throws IOException;
+
+  // check and correct storage policy and encoding for path and anything under it if supported
+  // by underlying FileSystem
+  void checkDirPoliciesRecursively(Path path, String storagePolicy, String encoding)
+      throws IOException;
+
+  // forward to the appropriate FileSystem object
   FSDataInputStream open(Path path) throws IOException;
 
   // forward to the appropriate FileSystem object, throws an exception if the paths are in different

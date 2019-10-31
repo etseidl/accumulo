@@ -240,6 +240,9 @@ public class Tablet {
 
   private final Deriver<byte[]> defaultSecurityLabel;
 
+  private final Deriver<String> storagePolicy;
+  private final Deriver<String> encodingPolicy;
+
   private long lastMinorCompactionFinishTime = 0;
   private long lastMapFileImportTime = 0;
 
@@ -291,6 +294,11 @@ public class Tablet {
         + context.getUniqueNameAllocator().getNextName() + "." + extension);
   }
 
+  private Path parentPath(Path path) {
+    Path parent = path.getParent();
+    return parent == null ? path : parent;
+  }
+
   private void checkTabletDir(Path path) throws IOException {
     if (!checkedTabletDirs.contains(path)) {
       FileStatus[] files = null;
@@ -303,7 +311,32 @@ public class Tablet {
       if (files == null) {
         log.debug("Tablet {} had no dir, creating {}", extent, path);
 
-        getTabletServer().getFileSystem().mkdirs(path);
+        getTabletServer().getFileSystem().mkdirs(path, storagePolicy.derive(),
+            encodingPolicy.derive());
+        // if this is the default tablet, take responsibility for parent dir
+        if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
+          try {
+            getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
+                storagePolicy.derive(), encodingPolicy.derive());
+          } catch (IOException e) {
+            // not fatal, just log it
+            log.warn("error setting table policies", e);
+          }
+        }
+      } else {
+        // directory already exists, make sure coding policies are correct
+        try {
+          getTabletServer().getFileSystem().checkDirPolicies(path, storagePolicy.derive(),
+              encodingPolicy.derive());
+          // if this is the default tablet, take responsibility for parent dir
+          if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
+            getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
+                storagePolicy.derive(), encodingPolicy.derive());
+          }
+        } catch (IOException e) {
+          // not fatal, just log it
+          log.warn("error setting table policies", e);
+        }
       }
       checkedTabletDirs.add(path);
     }
@@ -360,6 +393,9 @@ public class Tablet {
           conf -> new ColumnVisibility(conf.get(Property.TABLE_DEFAULT_SCANTIME_VISIBILITY))
               .getExpression());
     }
+
+    storagePolicy = tableConfiguration.newDeriver(conf -> conf.get(Property.TABLE_STORAGE_POLICY));
+    encodingPolicy = tableConfiguration.newDeriver(conf -> conf.get(Property.TABLE_CODING_POLICY));
 
     tabletMemory = new TabletMemory(this);
 

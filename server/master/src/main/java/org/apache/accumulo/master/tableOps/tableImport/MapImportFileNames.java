@@ -32,6 +32,7 @@ import org.apache.accumulo.core.file.FileOperations;
 import org.apache.accumulo.fate.Repo;
 import org.apache.accumulo.master.Master;
 import org.apache.accumulo.master.tableOps.MasterRepo;
+import org.apache.accumulo.master.tableOps.Utils;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.tablets.UniqueNameAllocator;
 import org.apache.hadoop.fs.FileStatus;
@@ -59,8 +60,14 @@ class MapImportFileNames extends MasterRepo {
 
     try {
       VolumeManager fs = environment.getFileSystem();
+      // get storage and ec policies for table
+      var policies =
+          Utils.getPoliciesForTable(environment.getConfigurationFactory(), tableInfo.tableId);
 
-      fs.mkdirs(new Path(tableInfo.importDir));
+      // create parent dir too to set storage and encoding policy
+      fs.mkdirs(new Path(tableInfo.importParent), policies.storagePolicy, policies.encodingPolicy);
+      // children should inherit policy, but setting explicitly just in case
+      fs.mkdirs(new Path(tableInfo.importDir), policies.storagePolicy, policies.encodingPolicy);
 
       FileStatus[] files = fs.listStatus(new Path(tableInfo.exportDir));
 

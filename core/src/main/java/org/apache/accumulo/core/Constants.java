@@ -20,6 +20,8 @@ package org.apache.accumulo.core;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+
 public class Constants {
 
   public static final String VERSION = FilteredConstants.VERSION;
@@ -115,4 +117,7 @@ public class Constants {
   public static final String HDFS_TABLES_DIR = "/tables";
 
   public static final int DEFAULT_VISIBILITY_CACHE_SIZE = 1000;
+
+  // used to indicate normal hdfs replication, rather than erasure coding
+  public static final String HDFS_REPLICATION = ErasureCodeConstants.REPLICATION_POLICY_NAME;
 }

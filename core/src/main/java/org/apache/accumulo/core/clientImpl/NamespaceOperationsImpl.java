@@ -47,6 +47,7 @@ import org.apache.accumulo.core.client.admin.TableOperations;
 import org.apache.accumulo.core.clientImpl.thrift.SecurityErrorCode;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftTableOperationException;
+import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.constraints.Constraint;
 import org.apache.accumulo.core.data.NamespaceId;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
@@ -170,12 +171,19 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     doNamespaceFateOperation(FateOperation.NAMESPACE_RENAME, args, opts, oldNamespaceName);
   }
 
+  private boolean validProperty(final String property, final String value) {
+    if (!property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      return true;
+    return Property.isValidHdfsPolicy(property, value);
+  }
+
   @Override
   public void setProperty(final String namespace, final String property, final String value)
       throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     checkArgument(namespace != null, "namespace is null");
     checkArgument(property != null, "property is null");
     checkArgument(value != null, "value is null");
+    checkArgument(validProperty(property, value), "improper value for property");
 
     MasterClient.executeNamespace(context,
         client -> client.setNamespaceProperty(TraceUtil.traceInfo(), context.rpcCreds(), namespace,

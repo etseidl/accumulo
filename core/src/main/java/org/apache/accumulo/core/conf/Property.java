@@ -39,6 +39,7 @@ import org.apache.accumulo.core.util.format.DefaultFormatter;
 import org.apache.accumulo.core.util.interpret.DefaultScanInterpreter;
 import org.apache.accumulo.start.classloader.AccumuloClassLoader;
 import org.apache.accumulo.start.classloader.vfs.AccumuloVFSClassLoader;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -827,6 +828,32 @@ public enum Property {
           + " need fast seeks within the timestamp range of a column. When setting this to fail, "
           + "also consider configuring the `" + NoDeleteConstraint.class.getName() + "` "
           + "constraint."),
+  @Experimental
+  TABLE_HDFS_POLICY_PREFIX("table.hdfs.policy.", null, PropertyType.PREFIX,
+      "Properties in this category are used to configure HDFS directory policies."),
+  @Experimental
+  TABLE_STORAGE_POLICY("table.hdfs.policy.storage", HdfsConstants.HOT_STORAGE_POLICY_NAME,
+      PropertyType.STRING,
+      "HDFS Storage policy to apply to the directory tree holding the tablets for the "
+          + "table.  Can be one of " + HdfsConstants.HOT_STORAGE_POLICY_NAME + ", "
+          + HdfsConstants.WARM_STORAGE_POLICY_NAME + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME
+          + ", " + HdfsConstants.ONESSD_STORAGE_POLICY_NAME + ", "
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + ". "
+          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME
+          + " is also available, but since it cannot guarantee data is written to disk in the event "
+          + "of a power failure, it is not recommended for use.  There is also some confusion"
+          + "in the documentation about the performance of "
+          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME + " when more than one "
+          + "replicant is specified.  Also note, that only " + HdfsConstants.HOT_STORAGE_POLICY_NAME
+          + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME + ", and "
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + " make sense when using erasure coding."),
+  @Experimental
+  TABLE_CODING_POLICY("table.hdfs.policy.encoding", Constants.HDFS_REPLICATION, PropertyType.STRING,
+      "The HDFS erasure coding (EC) policy to apply to the directory tree holding the tablets "
+          + "for the table.  The default of 'replication' uses standard HDFS block replication, "
+          + "subject to defaults set elsewhere.  Other policies will vary depending on the HDFS "
+          + "configuration.  RS-6-3-64k seems to be a good balance between scan performance and "
+          + "random seek latency."),
 
   // VFS ClassLoader properties
 
@@ -1229,6 +1256,45 @@ public enum Property {
         || key.startsWith(Property.GENERAL_ARBITRARY_PROP_PREFIX.getKey())
         || key.startsWith(VFS_CONTEXT_CLASSPATH_PROPERTY.getKey())
         || key.startsWith(REPLICATION_PREFIX.getKey());
+  }
+
+  // since these are pre-defined we can check here
+  private static boolean validStoragePolicy(final String value) {
+    if (HdfsConstants.HOT_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.COLD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.PROVIDED_STORAGE_POLICY_NAME.equals(value))
+      return true;
+    return false;
+  }
+
+  /**
+   * Checks if the given property and value are valid for HDFS storage or encoding policy. Returns
+   * false if the key is not allowed, or if the value is invalid for the given key. The value
+   * checking only works for storage policy since encoding policies can have arbitrary names.
+   *
+   * @param key
+   *          property key
+   * @param value
+   *          property value
+   * @return true if this is a valid key,value pair for setting HDFS policy
+   */
+  public static boolean isValidHdfsPolicy(String key, String value) {
+    if (key == null || !key.startsWith(TABLE_HDFS_POLICY_PREFIX.getKey()))
+      return false;
+
+    if (key.equals(Property.TABLE_CODING_POLICY.getKey())) {
+      // can't really check here since the values are user configurable,
+      // so just return true
+      return true;
+    } else if (key.equals(Property.TABLE_STORAGE_POLICY.getKey())) {
+      return validStoragePolicy(value);
+    }
+    // unknown HDFS policy
+    return false;
   }
 
   /**

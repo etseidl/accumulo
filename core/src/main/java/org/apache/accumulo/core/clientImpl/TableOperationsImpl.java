@@ -950,12 +950,19 @@ public class TableOperationsImpl extends TableOperationsHelper {
     }
   }
 
+  private boolean validProperty(final String property, final String value) {
+    if (!property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+      return true;
+    return Property.isValidHdfsPolicy(property, value);
+  }
+
   @Override
   public void setProperty(final String tableName, final String property, final String value)
       throws AccumuloException, AccumuloSecurityException {
     checkArgument(tableName != null, "tableName is null");
     checkArgument(property != null, "property is null");
     checkArgument(value != null, "value is null");
+    checkArgument(validProperty(property, value), "improper value for property");
     try {
       setPropertyNoChecks(tableName, property, value);
 
