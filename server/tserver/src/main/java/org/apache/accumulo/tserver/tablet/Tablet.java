@@ -297,6 +297,11 @@ public class Tablet {
         + context.getUniqueNameAllocator().getNextName() + "." + extension));
   }
 
+  private Path parentPath(Path path) {
+    Path parent = path.getParent();
+    return parent == null ? path : parent;
+  }
+
   private void checkTabletDir(Path path) throws IOException {
     if (!checkedTabletDirs.contains(path)) {
       FileStatus[] files = null;

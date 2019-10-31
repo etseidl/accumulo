@@ -37,6 +37,7 @@ import org.apache.accumulo.core.clientImpl.Namespaces;
 import org.apache.accumulo.core.clientImpl.Tables;
 import org.apache.accumulo.core.clientImpl.thrift.TableOperation;
 import org.apache.accumulo.core.clientImpl.thrift.TableOperationExceptionType;
+import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.data.AbstractId;
 import org.apache.accumulo.core.data.NamespaceId;
 import org.apache.accumulo.core.data.TableId;
@@ -47,6 +48,7 @@ import org.apache.accumulo.fate.zookeeper.ZooReservation;
 import org.apache.accumulo.fate.zookeeper.ZooUtil;
 import org.apache.accumulo.master.Master;
 import org.apache.accumulo.server.ServerContext;
+import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
@@ -212,5 +214,31 @@ public class Utils {
       }
     }
     return data;
+  }
+
+  public static class Policies {
+    public String storagePolicy;
+    public String encodingPolicy;
+
+    public Policies(String storage, String encoding) {
+      storagePolicy = storage;
+      encodingPolicy = encoding;
+    }
+  }
+
+  public static Policies getPoliciesForTable(ServerConfigurationFactory serverConfFactory,
+      TableId tableId) {
+    var tableConf = serverConfFactory.getTableConfiguration(tableId);
+    var storagePolicy = tableConf.get(Property.TABLE_STORAGE_POLICY);
+    var encoding = tableConf.get(Property.TABLE_CODING_POLICY);
+    return new Policies(storagePolicy, encoding);
+  }
+
+  public static Policies getPoliciesForNamespace(ServerConfigurationFactory serverConfFactory,
+      NamespaceId namespaceId) {
+    var namespaceConf = serverConfFactory.getNamespaceConfiguration(namespaceId);
+    var storagePolicy = namespaceConf.get(Property.TABLE_STORAGE_POLICY);
+    var encoding = namespaceConf.get(Property.TABLE_CODING_POLICY);
+    return new Policies(storagePolicy, encoding);
   }
 }
