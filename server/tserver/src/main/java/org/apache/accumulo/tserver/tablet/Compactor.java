@@ -52,6 +52,8 @@ import org.apache.accumulo.core.iteratorsImpl.system.TimeSettingIterator;
 import org.apache.accumulo.core.metadata.schema.DataFileValue;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.LocalityGroupUtil.LocalityGroupConfigurationError;
+import org.apache.accumulo.core.util.RegionTimer;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.core.util.ratelimit.RateLimiter;
 import org.apache.accumulo.server.ServerContext;
 import org.apache.accumulo.server.fs.FileRef;
@@ -192,6 +194,7 @@ public class Compactor implements Callable<CompactionStats> {
 
   @Override
   public CompactionStats call() throws IOException, CompactionCanceledException {
+    RegionTimer regtimer = TimerManager.timerForThread();
 
     FileSKVWriter mfw = null;
 
@@ -208,6 +211,7 @@ public class Compactor implements Callable<CompactionStats> {
         + dateFormatter.format(new Date()) + " file: " + outputFile;
     Thread.currentThread().setName(newThreadName);
     thread = Thread.currentThread();
+    regtimer.enter("Compactor:call");
     try {
       FileOperations fileFactory = FileOperations.getInstance();
       FileSystem ns = this.fs.getVolumeByPath(outputFilePath).getFileSystem();
@@ -261,6 +265,7 @@ public class Compactor implements Callable<CompactionStats> {
       log.error("{}", e.getMessage(), e);
       throw e;
     } finally {
+      regtimer.exit("Compactor:call");
       Thread.currentThread().setName(oldThreadName);
       if (remove) {
         thread = null;

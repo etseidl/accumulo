@@ -86,6 +86,9 @@ public final class BCFile {
   private static final String FS_OUTPUT_BUF_SIZE_ATTR = "tfile.fs.output.buffer.size";
   private static final String FS_INPUT_BUF_SIZE_ATTR = "tfile.fs.input.buffer.size";
 
+  // put this here since SimpleBufferedOutputStream is package protected
+  public static final String KEY_WRITE_TO_HDFS = "writeToHdfs";
+
   private static int getFSOutputBufferSize(Configuration conf) {
     return conf.getInt(FS_OUTPUT_BUF_SIZE_ATTR, 256 * 1024);
   }

@@ -969,9 +969,11 @@ public class TableOperationsImpl extends TableOperationsHelper {
       checkLocalityGroups(tableName, property);
 
       // if the storage or encoding policy was changed, send message to update
-      // table directories
+      // table directories. if policy is invalid, we'll wind up with
+      // bad data in zookeeper, but the operation should finish with a
+      // warning message. user will have to try again and correct error.
       if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-        propertyChanged(tableName, property);
+        propertyChanged(tableName, property, value);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -997,7 +999,7 @@ public class TableOperationsImpl extends TableOperationsHelper {
       // if the storage or encoding policy was changed, send message to update
       // table directories
       if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-        propertyChanged(tableName, property);
+        propertyChanged(tableName, property, null);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -1026,10 +1028,11 @@ public class TableOperationsImpl extends TableOperationsHelper {
     }
   }
 
-  private void propertyChanged(String tableName, String propChanged)
+  private void propertyChanged(final String tableName, final String propChanged, final String value)
       throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
     List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(tableName.getBytes(UTF_8)),
-        ByteBuffer.wrap(propChanged.getBytes(UTF_8)));
+        ByteBuffer.wrap(propChanged.getBytes(UTF_8)),
+        ByteBuffer.wrap((value == null ? Constants.PROPERTY_REMOVED : value).getBytes(UTF_8)));
     Map<String,String> opts = new HashMap<>();
 
     try {

@@ -35,6 +35,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.IteratorSetting;
@@ -191,9 +192,11 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     checkLocalityGroups(namespace, property);
 
     // if the storage or encoding policy was changed, send message to update
-    // table directories
+    // table directories. if policy is invalid, we'll wind up with
+    // bad data in zookeeper, but the operation should finish with a
+    // warning message. user will have to try again and correct error.
     if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-      propertyChanged(namespace, property);
+      propertyChanged(namespace, property, value);
   }
 
   @Override
@@ -209,13 +212,14 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
     // if the storage or encoding policy was changed, send message to update
     // table directories
     if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-      propertyChanged(namespace, property);
+      propertyChanged(namespace, property, null);
   }
 
-  private void propertyChanged(String namespace, String propChanged)
+  private void propertyChanged(final String namespace, final String propChanged, final String value)
       throws AccumuloSecurityException, NamespaceNotFoundException, AccumuloException {
     List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(namespace.getBytes(UTF_8)),
-        ByteBuffer.wrap(propChanged.getBytes(UTF_8)));
+        ByteBuffer.wrap(propChanged.getBytes(UTF_8)),
+        ByteBuffer.wrap((value == null ? Constants.PROPERTY_REMOVED : value).getBytes(UTF_8)));
     Map<String,String> opts = new HashMap<>();
 
     try {

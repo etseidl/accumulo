@@ -159,10 +159,10 @@ class FateServiceHandler implements FateService.Iface {
       }
       case NAMESPACE_PROPERTY_CHANGE: {
         TableOperation tableOp = TableOperation.PROPERTY_CHANGE;
-        validateArgumentCount(arguments, tableOp, 2);
+        validateArgumentCount(arguments, tableOp, 3);
         String namespace = validateNamespaceArgument(arguments.get(0), tableOp,
             Namespaces.NOT_DEFAULT.and(Namespaces.NOT_ACCUMULO));
-        validatePropertyChangeArgument(arguments.get(1), tableOp);
+        validatePropertyChangeArgument(arguments.get(1), arguments.get(2), tableOp);
 
         NamespaceId namespaceId =
             ClientServiceHandler.checkNamespaceId(master.getContext(), namespace, tableOp);
@@ -612,9 +612,9 @@ class FateServiceHandler implements FateService.Iface {
       }
       case TABLE_PROPERTY_CHANGE: {
         TableOperation tableOp = TableOperation.PROPERTY_CHANGE;
-        validateArgumentCount(arguments, tableOp, 2);
+        validateArgumentCount(arguments, tableOp, 3);
         String tableName = validateTableNameArgument(arguments.get(0), tableOp, NOT_SYSTEM);
-        validatePropertyChangeArgument(arguments.get(1), tableOp);
+        validatePropertyChangeArgument(arguments.get(1), arguments.get(2), tableOp);
 
         final TableId tableId =
             ClientServiceHandler.checkTableId(master.getContext(), tableName, tableOp);
@@ -721,13 +721,16 @@ class FateServiceHandler implements FateService.Iface {
   }
 
   // check that the notification is regarding HDFS policy properties
-  private void validatePropertyChangeArgument(ByteBuffer propChangedArg, TableOperation op)
-      throws ThriftTableOperationException {
+  private void validatePropertyChangeArgument(ByteBuffer propChangedArg, ByteBuffer newValueArg,
+      TableOperation op) throws ThriftTableOperationException {
     String propChanged = propChangedArg == null ? null : ByteBufferUtil.toString(propChangedArg);
-    if (propChanged == null || !propChanged.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
+    String propValue = newValueArg == null ? null : ByteBufferUtil.toString(newValueArg);
+    if (propChanged == null || !propChanged.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey())
+        || propValue == null || (op.equals(TableOperation.PROPERTY_CHANGE)
+            && !Property.isValidHdfsPolicy(propChanged, propValue)))
       throw new ThriftTableOperationException(null, propChanged, op,
           TableOperationExceptionType.INVALID_NAME,
-          "invalid property change notification " + propChanged);
+          "invalid property change notification " + propChanged + "=" + propValue);
   }
 
   // Verify table name arguments are valid, and match any additional restrictions

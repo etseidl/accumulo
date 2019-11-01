@@ -126,7 +126,7 @@
     <failsafe.groups />
     <!-- surefire/failsafe plugin option -->
     <forkCount>1</forkCount>
-    <hadoop.version>3.1.2</hadoop.version>
+    <hadoop.version>3.2.1</hadoop.version>
     <hk2.version>2.5.0</hk2.version>
     <htrace.hadoop.version>4.1.0-incubating</htrace.hadoop.version>
     <htrace.version>3.2.0-incubating</htrace.version>

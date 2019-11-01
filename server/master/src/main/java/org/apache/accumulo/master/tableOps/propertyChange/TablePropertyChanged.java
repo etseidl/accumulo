@@ -29,9 +29,13 @@ import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.fs.VolumeChooserEnvironment;
 import org.apache.accumulo.server.fs.VolumeChooserEnvironmentImpl;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TablePropertyChanged extends MasterRepo {
   private static final long serialVersionUID = 1L;
+
+  private static final Logger log = LoggerFactory.getLogger(TablePropertyChanged.class);
 
   private TableId tableId;
   private NamespaceId namespaceId;
@@ -43,6 +47,7 @@ public class TablePropertyChanged extends MasterRepo {
 
   @Override
   public long isReady(long tid, Master env) throws Exception {
+    log.debug("tablePropChange: reserve NS {} TABLE {}", namespaceId, tableId);
     return Utils.reserveNamespace(env, namespaceId, tid, false, false,
         TableOperation.PROPERTY_CHANGE)
         + Utils.reserveTable(env, tableId, tid, true, true, TableOperation.PROPERTY_CHANGE);
@@ -58,8 +63,16 @@ public class TablePropertyChanged extends MasterRepo {
             + Constants.HDFS_TABLES_DIR + Path.SEPARATOR + tableId;
 
     var policies = Utils.getPoliciesForTable(env.getConfigurationFactory(), tableId);
+
+    log.debug("check table {} ({},{})", tableDir, policies.storagePolicy, policies.encodingPolicy);
+
+    // let exception get thrown so user knows something is wrong
     env.getFileSystem().checkDirPoliciesRecursively(new Path(tableDir), policies.storagePolicy,
         policies.encodingPolicy);
+
+    Utils.getReadLock(env, tableId, tid).unlock();
+    Utils.getReadLock(env, namespaceId, tid).unlock();
+
     return null;
   }
 

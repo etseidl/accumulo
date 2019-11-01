@@ -1282,6 +1282,44 @@ public enum Property {
         || key.startsWith(REPLICATION_PREFIX.getKey());
   }
 
+  // since these are pre-defined we can check here
+  private static boolean validStoragePolicy(final String value) {
+    if (HdfsConstants.HOT_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.COLD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
+        || HdfsConstants.PROVIDED_STORAGE_POLICY_NAME.equals(value))
+      return true;
+    return false;
+  }
+
+  /**
+   * Checks if the given property and value are valid for HDFS storage or encoding policy. Returns
+   * false if the key is not allowed, or if the value is invalid for the given key. The value
+   * checking only works for storage policy since encoding policies can have arbitrary names.
+   *
+   * @param key
+   *          property key
+   * @param value
+   *          property value
+   * @return true if this is a valid key,value pair for setting HDFS policy
+   */
+  public static boolean isValidHdfsPolicy(String key, String value) {
+    if (key == null || !key.startsWith(TABLE_HDFS_POLICY_PREFIX.getKey()))
+      return false;
+
+    if (key.equals(Property.TABLE_CODING_POLICY.getKey())) {
+      // can't really check here, so just return true
+      return true;
+    } else if (key.equals(Property.TABLE_STORAGE_POLICY.getKey())) {
+      return validStoragePolicy(value);
+    }
+    // unknown HDFS policy
+    return false;
+  }
+
   /**
    * Gets a {@link Property} instance with the given key.
    *

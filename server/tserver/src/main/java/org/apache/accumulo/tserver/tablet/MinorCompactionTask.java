@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.accumulo.core.metadata.schema.DataFileValue;
 import org.apache.accumulo.core.trace.TraceUtil;
+import org.apache.accumulo.core.util.RegionTimer;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.server.fs.FileRef;
 import org.apache.accumulo.tserver.MinorCompactionReason;
 import org.apache.accumulo.tserver.compaction.MajorCompactionReason;
@@ -61,6 +63,8 @@ class MinorCompactionTask implements Runnable {
     tablet.minorCompactionStarted();
     ProbabilitySampler sampler = TraceUtil.probabilitySampler(tracePercent);
     try {
+      RegionTimer regtimer = TimerManager.timerForThread();
+      regtimer.enter("Tablet:minorCompact");
       try (TraceScope minorCompaction = Trace.startSpan("minorCompaction", sampler)) {
         FileRef newMapfileLocation = tablet.getNextMapFilename(mergeFile == null ? "F" : "M");
         FileRef tmpFileRef = new FileRef(newMapfileLocation.path() + "_tmp");
@@ -93,12 +97,17 @@ class MinorCompactionTask implements Runnable {
               newMapfileLocation, mergeFile, true, queued, commitSession, flushId, mincReason);
         }
 
+        regtimer.exit("Tablet:minorCompact");
         if (minorCompaction.getSpan() != null) {
           minorCompaction.getSpan().addKVAnnotation("extent", tablet.getExtent().toString());
           minorCompaction.getSpan().addKVAnnotation("numEntries",
               Long.toString(this.stats.getNumEntries()));
           minorCompaction.getSpan().addKVAnnotation("size", Long.toString(this.stats.getSize()));
+          minorCompaction.getSpan().addKVAnnotation("timing", regtimer.toJSON());
         }
+      } finally {
+        // clean up timer stuff
+        TimerManager.removeTimerForThread();
       }
 
       if (tablet.needsSplit()) {
