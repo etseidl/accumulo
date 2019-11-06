@@ -18,8 +18,11 @@
  */
 package org.apache.accumulo.tserver.tablet;
 
+import java.beans.Expression;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 
+import org.apache.accumulo.core.util.ExecutionSampler;
 import org.apache.accumulo.tserver.compaction.MajorCompactionReason;
 
 final class CompactionRunner implements Runnable, Comparable<CompactionRunner> {
@@ -36,7 +39,11 @@ final class CompactionRunner implements Runnable, Comparable<CompactionRunner> {
 
   @Override
   public void run() {
-    CompactionStats stats = tablet.majorCompact(reason, queued);
+    CompactionStats stats;
+    try (var sthread = ExecutionSampler.sample("compact " + tablet.getExtent().toString())) {
+      stats = tablet.majorCompact(reason, queued);
+      sthread.dumpSamples();
+    }
 
     // Some compaction strategies may always return true for shouldCompact() because they need to
     // make blocking calls to gather information. Without the following check these strategies would
