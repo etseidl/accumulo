@@ -875,7 +875,7 @@ public final class Compression {
 
   // ZSTD
   private static final String TIMED_ZSTD_CODEC =
-      "org.apache.accumulo.core.file.rfile.bcfile.Compression.TimedZStandardCodec";
+      "org.apache.accumulo.core.file.rfile.bcfile.Compression$TimedZStandardCodec";
 
   public static class TimedZStandardCodec extends ZStandardCodec {
     @Override
@@ -895,7 +895,7 @@ public final class Compression {
 
   // Snappy
   private static final String TIMED_SNAPPY_CODEC =
-      "org.apache.accumulo.core.file.rfile.bcfile.Compression.TimedSnappyCodec";
+      "org.apache.accumulo.core.file.rfile.bcfile.Compression$TimedSnappyCodec";
 
   public static class TimedSnappyCodec extends SnappyCodec {
     @Override
