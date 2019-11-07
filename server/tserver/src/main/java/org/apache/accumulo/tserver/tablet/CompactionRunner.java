@@ -18,9 +18,7 @@
  */
 package org.apache.accumulo.tserver.tablet;
 
-import java.beans.Expression;
 import java.util.Objects;
-import java.util.concurrent.Callable;
 
 import org.apache.accumulo.core.util.ExecutionSampler;
 import org.apache.accumulo.tserver.compaction.MajorCompactionReason;

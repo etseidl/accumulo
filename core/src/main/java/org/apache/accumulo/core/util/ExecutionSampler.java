@@ -18,15 +18,21 @@ package org.apache.accumulo.core.util;
 
 import java.io.Closeable;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.accumulo.fate.util.UtilWaitThread;
 
 public class ExecutionSampler implements Runnable {
+  private static long DEFAULT_MILLIS = 10;
+
   private String name;
   private Thread sampledThread;
+  private long sampleMillis;
+
   private boolean shouldStop = false;
-  private int sampleMillis = 10; // make this settable
   private HashMap<String,Sample> samples = new HashMap<>();
 
-  private class Sample {
+  private static class Sample {
     long count = 0;
 
     void inc() {
@@ -34,13 +40,14 @@ public class ExecutionSampler implements Runnable {
     }
   }
 
-  public ExecutionSampler(String exname, Thread threadToSample) {
+  public ExecutionSampler(String exname, Thread threadToSample, long millis) {
     this.name = exname;
     this.sampledThread = threadToSample;
+    this.sampleMillis = millis;
   }
 
-  public ExecutionSampler(Thread threadToSample) {
-    this(threadToSample.getName(), threadToSample);
+  public ExecutionSampler(String exname, Thread threadToSample) {
+    this(exname, threadToSample, DEFAULT_MILLIS);
   }
 
   public ExecutionSampler(String exname) {
@@ -48,38 +55,39 @@ public class ExecutionSampler implements Runnable {
   }
 
   public ExecutionSampler() {
-    this(Thread.currentThread().getName(), Thread.currentThread());
+    this(Thread.currentThread().getName());
+  }
+
+  public ExecutionSampler(String exname, long millis) {
+    this(exname, Thread.currentThread(), millis);
   }
 
   @Override
   public void run() {
     while (!shouldStop) {
       if (sampledThread.isAlive()) {
-        var curr = sampledThread.getStackTrace()[0];
-        var method = curr.getClassName() + "." + curr.getMethodName();
-        // System.out.println("in method: " + method);
-        var sample = samples.get(method);
-        if (sample == null) {
-          sample = new Sample();
-          samples.put(method, sample);
+        var trace = sampledThread.getStackTrace();
+        if (trace.length > 0) {
+          var curr = trace[0];
+          var method = curr.getClassName() + "." + curr.getMethodName();
+          // System.out.println("in method: " + method);
+          var sample = samples.get(method);
+          if (sample == null) {
+            sample = new Sample();
+            samples.put(method, sample);
+          }
+          sample.inc();
         }
-        sample.inc();
-        try {
-          Thread.sleep(sampleMillis);
-        } catch (InterruptedException ie) {
-          // ignored
-        }
+        UtilWaitThread.sleepUninterruptibly(sampleMillis, TimeUnit.MILLISECONDS);
       }
     }
   }
 
   public void dumpSamples() {
     StringBuilder b = new StringBuilder();
-    b.append("samples for " + name);
-    b.append('\n');
+    b.append("samples for ").append(name).append('\n');
     for (String k : samples.keySet()) {
-      b.append(k + ": " + samples.get(k).count);
-      b.append('\n');
+      b.append(k).append(": ").append(samples.get(k).count).append('\n');
     }
     System.out.println(b.toString());
   }
@@ -122,6 +130,7 @@ public class ExecutionSampler implements Runnable {
     return sthread;
   }
 
+  /* for debug...remove later */
   private static void foo(long niter) {
     for (long i = 0; i < niter; i++) {
       if (i < 0)
