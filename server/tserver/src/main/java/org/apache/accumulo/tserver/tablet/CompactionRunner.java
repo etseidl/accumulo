@@ -38,9 +38,10 @@ final class CompactionRunner implements Runnable, Comparable<CompactionRunner> {
   @Override
   public void run() {
     CompactionStats stats;
-    try (var sthread = ExecutionSampler.sample("compact " + tablet.getExtent().toString())) {
+    try (var sampler = ExecutionSampler.sample("compact " + tablet.getExtent().toString())) {
       stats = tablet.majorCompact(reason, queued);
-      sthread.dumpSamples();
+      sampler.stop();
+      sampler.dumpSamples();
     }
 
     // Some compaction strategies may always return true for shouldCompact() because they need to

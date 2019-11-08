@@ -17,26 +17,65 @@
 package org.apache.accumulo.core.util;
 
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.fate.util.UtilWaitThread;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class ExecutionSampler implements Runnable {
+public class ExecutionSampler implements Runnable, Closeable {
+  private static final Logger log = LoggerFactory.getLogger(ExecutionSampler.class);
+
   private static long DEFAULT_MILLIS = 10;
 
   private String name;
   private Thread sampledThread;
+  private Thread myThread;
   private long sampleMillis;
+
+  private long startTime = -1;
+  private long endTime = -1;
 
   private boolean shouldStop = false;
   private HashMap<String,Sample> samples = new HashMap<>();
 
-  private static class Sample {
+  private static class Sample implements Comparable<Sample> {
+    String name;
     long count = 0;
+
+    Sample(String nm) {
+      name = nm;
+    }
 
     void inc() {
       count++;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (o instanceof Sample) {
+        Sample s = (Sample) o;
+        return name.equals(s.name) && count == s.count;
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return name.hashCode();
+    }
+
+    @Override
+    public int compareTo(Sample s) {
+      // sort in descending order
+      if (count > s.count)
+        return -1;
+      else if (count == s.count)
+        return 0;
+      return 1;
     }
   }
 
@@ -64,6 +103,8 @@ public class ExecutionSampler implements Runnable {
 
   @Override
   public void run() {
+    log.debug("starting sampler {}", name);
+    startTime = System.currentTimeMillis();
     while (!shouldStop) {
       if (sampledThread.isAlive()) {
         var trace = sampledThread.getStackTrace();
@@ -73,61 +114,84 @@ public class ExecutionSampler implements Runnable {
           // System.out.println("in method: " + method);
           var sample = samples.get(method);
           if (sample == null) {
-            sample = new Sample();
+            sample = new Sample(method);
             samples.put(method, sample);
+            // log.debug("new method {} {}", method, samples.size());
           }
           sample.inc();
         }
         UtilWaitThread.sleepUninterruptibly(sampleMillis, TimeUnit.MILLISECONDS);
       }
     }
+    endTime = System.currentTimeMillis();
+    log.debug("sampler {} done", name);
   }
 
   public void dumpSamples() {
-    StringBuilder b = new StringBuilder();
+    if (myThread != null && myThread.isAlive()) {
+      System.out.println("cannot dump samples while active");
+      return;
+    }
+
+    if (endTime == -1)
+      endTime = System.currentTimeMillis();
+
+    var s = new ArrayList<>(samples.values());
+    Collections.sort(s);
+
+    var b = new StringBuilder();
     b.append("samples for ").append(name).append('\n');
-    for (String k : samples.keySet()) {
-      b.append(k).append(": ").append(samples.get(k).count).append('\n');
+    b.append("  execution time ").append(endTime - startTime).append('\n');
+    for (Sample k : s) {
+      b.append(k.name).append(": ").append(k.count).append('\n');
     }
     System.out.println(b.toString());
   }
 
+  /**
+   * Signal sampler to stop, and then wait on the sampler thread to exit.
+   */
   public void stop() {
     shouldStop = true;
-  }
 
-  public static class SamplerThread extends Thread implements Closeable {
-    ExecutionSampler sampler;
-
-    SamplerThread(ExecutionSampler s) {
-      super();
-      sampler = s;
-    }
-
-    public ExecutionSampler sampler() {
-      return sampler;
-    }
-
-    @Override
-    public void close() {
-      sampler.stop();
+    while (myThread != null) {
       try {
-        this.join();
-      } catch (InterruptedException ie) {
-        // ignored
+        myThread.join();
+        myThread = null;
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
-
-    public void dumpSamples() {
-      sampler.dumpSamples();
-    }
   }
 
-  public static SamplerThread sample(String name) {
-    ExecutionSampler sampler = new ExecutionSampler(name);
-    SamplerThread sthread = new SamplerThread(sampler);
-    sthread.start();
-    return sthread;
+  /**
+   * For Closable interface. Simply calls stop().
+   */
+  @Override
+  public void close() {
+    stop();
+  }
+
+  /**
+   * Create a sampler and a thread to run it in. Thread will be started. calling stop() on the
+   * returned ExecutionSampler will join() the thread.
+   *
+   * @param name
+   *          name for sampler object
+   * @param millis
+   *          how long to sleep between samples
+   * @return sampler which contains running thread
+   */
+  public static ExecutionSampler sample(String name, long millis) {
+    ExecutionSampler sampler = new ExecutionSampler(name, millis);
+    Thread samplerThread = new Thread(sampler);
+    sampler.myThread = samplerThread;
+    samplerThread.start();
+    return sampler;
+  }
+
+  public static ExecutionSampler sample(String name) {
+    return sample(name, DEFAULT_MILLIS);
   }
 
   /* for debug...remove later */
@@ -146,11 +210,7 @@ public class ExecutionSampler implements Runnable {
   }
 
   public static void main(String[] args) {
-    ExecutionSampler sampler = new ExecutionSampler();
-    Thread samplerThread = new Thread(sampler);
-    samplerThread.start();
-
-    long t1 = System.currentTimeMillis();
+    ExecutionSampler sampler = ExecutionSampler.sample("test", 10);
 
     for (int i = 0; i < 10; i++) {
       System.out.println(i);
@@ -159,17 +219,7 @@ public class ExecutionSampler implements Runnable {
       bar(niter);
     }
 
-    long t2 = System.currentTimeMillis();
-
-    System.out.println("execution time: " + (t2 - t1));
-
     sampler.stop();
-    try {
-      samplerThread.join();
-    } catch (InterruptedException ie) {
-      ie.printStackTrace();
-    }
-
     sampler.dumpSamples();
   }
 }
