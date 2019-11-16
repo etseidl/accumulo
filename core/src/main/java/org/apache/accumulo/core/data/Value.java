@@ -189,13 +189,31 @@ public class Value implements WritableComparable<Object> {
 
   @Override
   public void readFields(final DataInput in) throws IOException {
-    this.value = new byte[in.readInt()];
+    byte[] buf = new byte[4];
+    in.readFully(buf);
+    int len = ((buf[0] & 0xff) << 24)
+            | ((buf[1] & 0xff) << 16)
+            | ((buf[2] & 0xff) << 8)
+            | (buf[3] & 0xff);
+
+    if (this.value == null || this.value.length != len)
+      this.value = new byte[len];
+
+    // this.value = new byte[in.readInt()];
     in.readFully(this.value, 0, this.value.length);
   }
 
   @Override
   public void write(final DataOutput out) throws IOException {
-    out.writeInt(this.value.length);
+    byte[] buf = new byte[4];
+    int len = this.value.length;
+    buf[0] = (byte)(len >>> 24);
+    buf[1] = (byte)(len >>> 16);
+    buf[2] = (byte)(len >>>  8);
+    buf[3] = (byte)(len >>>  0);
+    out.write(buf, 0, 4);
+
+    // out.writeInt(this.value.length);
     out.write(this.value, 0, this.value.length);
   }
 

@@ -94,7 +94,8 @@ public class RelativeKeyTest {
   }
 
   private int commonPrefixHelper(String a, String b) {
-    return RelativeKey.getCommonPrefix(new ArrayByteSequence(a), new ArrayByteSequence(b));
+    // return RelativeKey.getCommonPrefix(new ArrayByteSequence(a), new ArrayByteSequence(b));
+    return new Key(a).getCommonRowPrefix(new Key(b));
   }
 
   @Test

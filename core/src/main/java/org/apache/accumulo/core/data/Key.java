@@ -1275,12 +1275,16 @@ public class Key implements WritableComparable<Key>, Cloneable {
     }
   }
 
+  /* ETS: made these public so they are visible to RelativeKey.
+   * if this actually helps should move RelativeKey to
+   * this package and make package protected.
+   */
   /**
    * Gets the row ID as a byte array.
    *
    * @return row ID
    */
-  byte[] getRowBytes() {
+  public byte[] getRowBytes() {
     return row;
   }
 
@@ -1289,7 +1293,7 @@ public class Key implements WritableComparable<Key>, Cloneable {
    *
    * @return column family
    */
-  byte[] getColFamily() {
+  public byte[] getColFamily() {
     return colFamily;
   }
 
@@ -1298,7 +1302,7 @@ public class Key implements WritableComparable<Key>, Cloneable {
    *
    * @return column qualifier
    */
-  byte[] getColQualifier() {
+  public byte[] getColQualifier() {
     return colQualifier;
   }
 
@@ -1307,7 +1311,7 @@ public class Key implements WritableComparable<Key>, Cloneable {
    *
    * @return column visibility
    */
-  byte[] getColVisibility() {
+  public byte[] getColVisibility() {
     return colVisibility;
   }
 
@@ -1329,5 +1333,90 @@ public class Key implements WritableComparable<Key>, Cloneable {
     r.colQualifier = Arrays.copyOf(colQualifier, colQualifier.length);
     r.colVisibility = Arrays.copyOf(colVisibility, colVisibility.length);
     return r;
+  }
+
+  // ETS: experiment with speeding up some heavily used methods
+  // these were originially in RelativeKey, but creating an ArrayByteSequence
+  // and then iterating through that using .getByte() seems like a lot of
+  // wasted effort
+  static private int getCommonPrefix(byte[] prev, byte[] cur) {
+    if (prev == cur)
+      return -1; // infinite... exact match
+
+    int prevLen = prev.length;
+    int curLen = cur.length;
+    int maxChecks = Math.min(prevLen, curLen);
+    int common = 0;
+    while (common < maxChecks) {
+      if (prev[common] != cur[common])
+        return common;
+      common++;
+    }
+    // no differences found
+    // either exact or matches the part checked, so if they are the same length, they are an exact
+    // match,
+    // and if not, then they have a common prefix over all the checks we've done
+    return prevLen == curLen ? -1 : maxChecks;
+  }
+
+  public int getCommonRowPrefix(Key cur) {
+    return getCommonPrefix(row, cur.row);
+  }
+
+  public int getCommonCFPrefix(Key cur) {
+    return getCommonPrefix(colFamily, cur.colFamily);
+  }
+
+  public int getCommonCQPrefix(Key cur) {
+    return getCommonPrefix(colQualifier, cur.colQualifier);
+  }
+
+  public int getCommonVisPrefix(Key cur) {
+    return getCommonPrefix(colVisibility, cur.colVisibility);
+  }
+
+  private static void write(DataOutput out, byte[] bs) throws IOException {
+    WritableUtils.writeVInt(out, bs.length);
+    out.write(bs, 0, bs.length);
+  }
+
+  private static void writePrefix(DataOutput out, byte[] bs, int commonPrefixLength)
+      throws IOException {
+    int towrite = bs.length - commonPrefixLength;
+    WritableUtils.writeVInt(out, commonPrefixLength);
+    WritableUtils.writeVInt(out, towrite);
+    out.write(bs, commonPrefixLength, towrite);
+  }
+
+  public void writeRowData(DataOutput out) throws IOException {
+    write(out, row);
+  }
+
+  public void writeRowPrefix(DataOutput out, int commonPrefixLength) throws IOException {
+    writePrefix(out, row, commonPrefixLength);
+  }
+
+  public void writeCFData(DataOutput out) throws IOException {
+    write(out, colFamily);
+  }
+
+  public void writeCFPrefix(DataOutput out, int commonPrefixLength) throws IOException {
+    writePrefix(out, colFamily, commonPrefixLength);
+  }
+
+  public void writeCQData(DataOutput out) throws IOException {
+    write(out, colQualifier);
+  }
+
+  public void writeCQPrefix(DataOutput out, int commonPrefixLength) throws IOException {
+    writePrefix(out, colQualifier, commonPrefixLength);
+  }
+
+  public void writeVisData(DataOutput out) throws IOException {
+    write(out, colVisibility);
+  }
+
+  public void writeVisPrefix(DataOutput out, int commonPrefixLength) throws IOException {
+    writePrefix(out, colVisibility, commonPrefixLength);
   }
 }
