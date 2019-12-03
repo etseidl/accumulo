@@ -1261,7 +1261,7 @@ public enum Property {
   }
 
   // added in hadoop 3.1, but need to support compilation against
-  // hadoop 3.0.  replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
+  // hadoop 3.0. replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
   // when 3.0 support is not longer required.
   private static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
 
