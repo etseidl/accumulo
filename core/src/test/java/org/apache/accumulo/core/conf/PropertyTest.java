@@ -174,7 +174,8 @@ public class PropertyTest {
   @Test
   public void testIsValidTablePropertyKey() {
     for (Property prop : Property.values()) {
-      if (prop.getKey().startsWith("table.") && !prop.getKey().equals("table.")) {
+      if (prop.getKey().startsWith("table.") && !prop.getKey().equals("table.")
+          && !prop.getKey().equals(Property.TABLE_HDFS_POLICY_PREFIX.getKey())) {
         assertTrue(Property.isValidTablePropertyKey(prop.getKey()));
 
         if (prop.getType().equals(PropertyType.PREFIX)) {
