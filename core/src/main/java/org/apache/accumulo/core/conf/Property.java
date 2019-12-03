@@ -1267,8 +1267,11 @@ public enum Property {
         || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
         || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
         || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.PROVIDED_STORAGE_POLICY_NAME.equals(value))
+        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value))
+      /*
+       * remove until support for hadoop 3.0 is dropped
+       * HdfsConstants.PROVIDED_STORAGE_POLICY_NAME.equals(value)
+       */
       return true;
     return false;
   }
