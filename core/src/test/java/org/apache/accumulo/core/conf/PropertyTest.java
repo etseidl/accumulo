@@ -32,6 +32,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.junit.Test;
 
 /**
@@ -190,5 +191,18 @@ public class PropertyTest {
     }
 
     assertFalse(Property.isValidTablePropertyKey("abc.def"));
+  }
+
+  @Test
+  public void testIsValidHdfsPolicy() {
+    // coding policy should take any value
+    assertTrue(Property.isValidHdfsPolicy(Property.TABLE_CODING_POLICY.getKey(), "foo9"));
+
+    // storage policy must be defined in HdfsConstants
+    assertFalse(Property.isValidHdfsPolicy(Property.TABLE_STORAGE_POLICY.getKey(), "foo9"));
+    assertTrue(Property.isValidHdfsPolicy(Property.TABLE_STORAGE_POLICY.getKey(),
+        HdfsConstants.HOT_STORAGE_POLICY_NAME));
+    // forward compatibility with hadoop 3.1 on
+    assertTrue(Property.isValidHdfsPolicy(Property.TABLE_STORAGE_POLICY.getKey(), "PROVIDED"));
   }
 }
