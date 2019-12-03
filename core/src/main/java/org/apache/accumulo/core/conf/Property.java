@@ -1258,6 +1258,11 @@ public enum Property {
         || key.startsWith(REPLICATION_PREFIX.getKey());
   }
 
+  // added in hadoop 3.1, but need to support compilation against
+  // hadoop 3.0.  replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
+  // when 3.0 support is not longer required.
+  private static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
+
   // since these are pre-defined we can check here
   private static boolean validStoragePolicy(final String value) {
     if (HdfsConstants.HOT_STORAGE_POLICY_NAME.equals(value)
@@ -1265,11 +1270,8 @@ public enum Property {
         || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
         || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
         || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value))
-      /*
-       * remove until support for hadoop 3.0 is dropped
-       * HdfsConstants.PROVIDED_STORAGE_POLICY_NAME.equals(value)
-       */
+        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
+        || PROVIDED_STORAGE_POLICY_NAME.equals(value))
       return true;
     return false;
   }
