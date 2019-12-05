@@ -113,6 +113,7 @@ import org.apache.accumulo.server.tablets.UniqueNameAllocator;
 import org.apache.accumulo.server.util.FileUtil;
 import org.apache.accumulo.server.util.MasterMetadataUtil;
 import org.apache.accumulo.server.util.MetadataTableUtil;
+import org.apache.accumulo.server.util.Policies;
 import org.apache.accumulo.server.util.ReplicationTableUtil;
 import org.apache.accumulo.start.classloader.vfs.AccumuloVFSClassLoader;
 import org.apache.accumulo.tserver.ConditionCheckerContext.ConditionChecker;
@@ -240,8 +241,7 @@ public class Tablet {
 
   private final Deriver<byte[]> defaultSecurityLabel;
 
-  private final Deriver<String> storagePolicy;
-  private final Deriver<String> encodingPolicy;
+  private final Deriver<Policies> storagePolicy;
 
   private long lastMinorCompactionFinishTime = 0;
   private long lastMapFileImportTime = 0;
@@ -311,13 +311,12 @@ public class Tablet {
       if (files == null) {
         log.debug("Tablet {} had no dir, creating {}", extent, path);
 
-        getTabletServer().getFileSystem().mkdirs(path, storagePolicy.derive(),
-            encodingPolicy.derive());
+        getTabletServer().getFileSystem().mkdirs(path, storagePolicy.derive());
         // if this is the default tablet, take responsibility for parent dir
         if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
           try {
             getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
-                storagePolicy.derive(), encodingPolicy.derive());
+                storagePolicy.derive());
           } catch (IOException e) {
             // not fatal, just log it
             log.warn("error setting table policies", e);
@@ -326,12 +325,11 @@ public class Tablet {
       } else {
         // directory already exists, make sure coding policies are correct
         try {
-          getTabletServer().getFileSystem().checkDirPolicies(path, storagePolicy.derive(),
-              encodingPolicy.derive());
+          getTabletServer().getFileSystem().checkDirPolicies(path, storagePolicy.derive());
           // if this is the default tablet, take responsibility for parent dir
           if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
             getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
-                storagePolicy.derive(), encodingPolicy.derive());
+                storagePolicy.derive());
           }
         } catch (IOException e) {
           // not fatal, just log it
@@ -394,8 +392,8 @@ public class Tablet {
               .getExpression());
     }
 
-    storagePolicy = tableConfiguration.newDeriver(conf -> conf.get(Property.TABLE_STORAGE_POLICY));
-    encodingPolicy = tableConfiguration.newDeriver(conf -> conf.get(Property.TABLE_CODING_POLICY));
+    storagePolicy = tableConfiguration
+        .newDeriver(conf -> Policies.getPoliciesForTable((TableConfiguration) conf));
 
     tabletMemory = new TabletMemory(this);
 
