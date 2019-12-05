@@ -151,10 +151,6 @@ public interface VolumeManager {
   // by underlying FileSystem
   void checkDirPolicies(Path path, Policies policies) throws IOException;
 
-  // check and correct storage policy and encoding for path and anything under it if supported
-  // by underlying FileSystem
-  void checkDirPoliciesRecursively(Path path, Policies policies) throws IOException;
-
   // forward to the appropriate FileSystem object
   FSDataInputStream open(Path path) throws IOException;
 
