@@ -362,10 +362,10 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   @Override
-  public boolean mkdirs(Path path, String storagePolicy, String encoding) throws IOException {
+  public boolean mkdirs(Path path, Policies policies) throws IOException {
     boolean ret = mkdirs(path);
     try {
-      checkDirPolicies(path, storagePolicy, encoding);
+      checkDirPolicies(path, policies);
     } catch (IOException e) {
       // non-fatal error, just print warning and continue
       // directory will just have wrong policy.
@@ -375,8 +375,7 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   @Override
-  public void checkDirPolicies(Path path, String storagePolicy, String encoding)
-      throws IOException {
+  public void checkDirPolicies(Path path, Policies policies) throws IOException {
     FileSystem fs = getVolumeByPath(path).getFileSystem();
     // check that path exists...it may not yet, which is ok. just return
     if (!fs.exists(path)) {
@@ -387,6 +386,9 @@ public class VolumeManagerImpl implements VolumeManager {
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
       BlockStoragePolicySpi currPolicy = dfs.getStoragePolicy(path);
       ErasureCodingPolicy currEC = dfs.getErasureCodingPolicy(path);
+
+      String encoding = policies.getEncodingPolicy();
+      String storagePolicy = policies.getStoragePolicy();
 
       log.debug("check {}: ec is {} want {}", path, currEC, encoding);
       log.debug("check {}: sp is {} want {}", path, currPolicy, storagePolicy);
@@ -440,8 +442,7 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   @Override
-  public void checkDirPoliciesRecursively(Path path, String storagePolicy, String encoding)
-      throws IOException {
+  public void checkDirPoliciesRecursively(Path path, Policies policies) throws IOException {
     FileSystem fs = getVolumeByPath(path).getFileSystem();
     // check that path exists...it may not yet, which is ok. just return
     if (!fs.exists(path)) {
@@ -452,7 +453,7 @@ public class VolumeManagerImpl implements VolumeManager {
     // only need to do checks if HDFS
     if (fs instanceof DistributedFileSystem) {
       // check toplevel
-      checkDirPolicies(path, storagePolicy, encoding);
+      checkDirPolicies(path, policies);
 
       // and then check children
       // TODO does the directory tree for a table ever get more than one level deep?
@@ -460,7 +461,7 @@ public class VolumeManagerImpl implements VolumeManager {
       var fstats = fs.listStatus(path);
       for (FileStatus fstat : fstats) {
         if (fstat.isDirectory()) {
-          checkDirPolicies(fstat.getPath(), storagePolicy, encoding);
+          checkDirPolicies(fstat.getPath(), policies);
         }
       }
     }
