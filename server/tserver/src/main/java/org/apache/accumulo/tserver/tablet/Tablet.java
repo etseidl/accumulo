@@ -241,7 +241,7 @@ public class Tablet {
 
   private final Deriver<byte[]> defaultSecurityLabel;
 
-  private final Deriver<Policies> storagePolicy;
+  private final Deriver<Policies> hdfsPolicies;
 
   private long lastMinorCompactionFinishTime = 0;
   private long lastMapFileImportTime = 0;
@@ -311,12 +311,12 @@ public class Tablet {
       if (files == null) {
         log.debug("Tablet {} had no dir, creating {}", extent, path);
 
-        getTabletServer().getFileSystem().mkdirs(path, storagePolicy.derive());
+        getTabletServer().getFileSystem().mkdirs(path, hdfsPolicies.derive());
         // if this is the default tablet, take responsibility for parent dir
         if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
           try {
             getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
-                storagePolicy.derive());
+                hdfsPolicies.derive());
           } catch (IOException e) {
             // not fatal, just log it
             log.warn("error setting table policies", e);
@@ -325,11 +325,11 @@ public class Tablet {
       } else {
         // directory already exists, make sure coding policies are correct
         try {
-          getTabletServer().getFileSystem().checkDirPolicies(path, storagePolicy.derive());
+          getTabletServer().getFileSystem().checkDirPolicies(path, hdfsPolicies.derive());
           // if this is the default tablet, take responsibility for parent dir
           if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
             getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
-                storagePolicy.derive());
+                hdfsPolicies.derive());
           }
         } catch (IOException e) {
           // not fatal, just log it
@@ -392,7 +392,7 @@ public class Tablet {
               .getExpression());
     }
 
-    storagePolicy = tableConfiguration
+    hdfsPolicies = tableConfiguration
         .newDeriver(conf -> Policies.getPoliciesForTable((TableConfiguration) conf));
 
     tabletMemory = new TabletMemory(this);
