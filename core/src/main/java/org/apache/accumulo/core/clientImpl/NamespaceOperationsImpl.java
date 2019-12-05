@@ -172,9 +172,10 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
   }
 
   private boolean validProperty(final String property, final String value) {
-    if (!property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-      return true;
-    return Property.isValidHdfsPolicy(property, value);
+    if (property.equals(Property.TABLE_STORAGE_POLICY.getKey())
+        || property.equals(Property.TABLE_CODING_POLICY.getKey()))
+      return Property.isValidHdfsPolicy(property, value);
+    return true;
   }
 
   @Override

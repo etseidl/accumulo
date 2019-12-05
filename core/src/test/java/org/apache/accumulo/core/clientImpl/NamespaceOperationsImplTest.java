@@ -42,16 +42,6 @@ public class NamespaceOperationsImplTest {
     namespaceOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "SPICY");
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void setInvalidPolicyTypeThrowsExcept()
-      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
-    ClientContext context = new ClientContext(new Properties());
-    TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-    NamespaceOperationsImpl namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
-
-    namespaceOpsImpl.setProperty("foo", Property.TABLE_HDFS_POLICY_PREFIX + "none", "NONE");
-  }
-
   // the next three just need to validate we get past the arguments checking...
   // will throw AccumuloException because instance.name property not set
   @Rule

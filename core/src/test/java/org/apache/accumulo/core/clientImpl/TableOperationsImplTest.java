@@ -37,16 +37,7 @@ public class TableOperationsImplTest {
     ClientContext context = new ClientContext(new Properties());
     TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
 
-    tableOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "VERYHOT");
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void setInvalidPolicyTypeThrowsExcept()
-      throws AccumuloException, AccumuloSecurityException {
-    ClientContext context = new ClientContext(new Properties());
-    TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-
-    tableOpsImpl.setProperty("foo", Property.TABLE_HDFS_POLICY_PREFIX + "none", "NONE");
+    tableOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "SPICY");
   }
 
   // the next three just need to validate we get past the arguments checking...

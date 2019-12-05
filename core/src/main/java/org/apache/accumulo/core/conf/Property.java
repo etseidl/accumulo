@@ -829,9 +829,6 @@ public enum Property {
           + "also consider configuring the `" + NoDeleteConstraint.class.getName() + "` "
           + "constraint."),
   @Experimental
-  TABLE_HDFS_POLICY_PREFIX("table.hdfs.policy.", null, PropertyType.PREFIX,
-      "Properties in this category are used to configure HDFS directory policies."),
-  @Experimental
   TABLE_STORAGE_POLICY("table.hdfs.policy.storage", HdfsConstants.HOT_STORAGE_POLICY_NAME,
       PropertyType.STRING,
       "HDFS Storage policy to apply to the directory tree holding the tablets for the "
@@ -1288,7 +1285,7 @@ public enum Property {
    * @return true if this is a valid key,value pair for setting HDFS policy
    */
   public static boolean isValidHdfsPolicy(String key, String value) {
-    if (key == null || !key.startsWith(TABLE_HDFS_POLICY_PREFIX.getKey()))
+    if (key == null)
       return false;
 
     if (key.equals(Property.TABLE_CODING_POLICY.getKey())) {
@@ -1298,7 +1295,7 @@ public enum Property {
     } else if (key.equals(Property.TABLE_STORAGE_POLICY.getKey())) {
       return validStoragePolicy(value);
     }
-    // unknown HDFS policy
+    // not a known HDFS policy or not a policy key
     return false;
   }
 
