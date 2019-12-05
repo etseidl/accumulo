@@ -442,32 +442,6 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   @Override
-  public void checkDirPoliciesRecursively(Path path, Policies policies) throws IOException {
-    FileSystem fs = getVolumeByPath(path).getFileSystem();
-    // check that path exists...it may not yet, which is ok. just return
-    if (!fs.exists(path)) {
-      log.debug("check {}: path does not exist", path);
-      return;
-    }
-
-    // only need to do checks if HDFS
-    if (fs instanceof DistributedFileSystem) {
-      // check toplevel
-      checkDirPolicies(path, policies);
-
-      // and then check children
-      // TODO does the directory tree for a table ever get more than one level deep?
-      log.debug("check recursively {}", path);
-      var fstats = fs.listStatus(path);
-      for (FileStatus fstat : fstats) {
-        if (fstat.isDirectory()) {
-          checkDirPolicies(fstat.getPath(), policies);
-        }
-      }
-    }
-  }
-
-  @Override
   public FSDataInputStream open(Path path) throws IOException {
     return getFileSystemByPath(path).open(path);
   }
