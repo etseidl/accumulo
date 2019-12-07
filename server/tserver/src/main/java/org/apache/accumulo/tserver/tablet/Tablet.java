@@ -322,19 +322,6 @@ public class Tablet {
             log.warn("error setting table policies", e);
           }
         }
-      } else {
-        // directory already exists, make sure coding policies are correct
-        try {
-          getTabletServer().getFileSystem().checkDirPolicies(path, hdfsPolicies.derive());
-          // if this is the default tablet, take responsibility for parent dir
-          if (path.getName().endsWith(ServerColumnFamily.DEFAULT_TABLET_DIR_NAME)) {
-            getTabletServer().getFileSystem().checkDirPolicies(parentPath(path),
-                hdfsPolicies.derive());
-          }
-        } catch (IOException e) {
-          // not fatal, just log it
-          log.warn("error setting table policies", e);
-        }
       }
       checkedTabletDirs.add(path);
     }
