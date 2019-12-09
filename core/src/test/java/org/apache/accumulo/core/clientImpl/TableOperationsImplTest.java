@@ -26,7 +26,9 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.conf.PropertyType;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TableOperationsImplTest {
   private TableOperationsImpl tableOpsImpl;
@@ -85,5 +87,17 @@ public class TableOperationsImplTest {
         throw new RuntimeException("test failed for property " + p.getKey(), e);
       }
     }
+  }
+
+  @Rule
+  public ExpectedException illegalArg = ExpectedException.none();
+
+  @Test
+  public void setCustomProperty() throws AccumuloException, AccumuloSecurityException {
+    // just need to validate we get past the arguments checking...
+    // will throw AccumuloException because instance.name property not set
+    illegalArg.expect(AccumuloException.class);
+    illegalArg.expectMessage("instance.name must be set");
+    tableOpsImpl.setProperty("foo", "table.custom.myproperty", "foo");
   }
 }
