@@ -830,26 +830,27 @@ public enum Property {
           + "constraint."),
   @Experimental
   TABLE_STORAGE_POLICY("table.hdfs.policy.storage", HdfsConstants.HOT_STORAGE_POLICY_NAME,
-      PropertyType.STRING,
+      PropertyType.STORAGE_POLICY,
       "HDFS Storage policy to apply to the directory tree holding the tablets for the "
-          + "table.  Can be one of " + HdfsConstants.HOT_STORAGE_POLICY_NAME + ", "
-          + HdfsConstants.WARM_STORAGE_POLICY_NAME + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME
-          + ", " + HdfsConstants.ONESSD_STORAGE_POLICY_NAME + ", "
-          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + ". "
+          + "table.  Can be one of '" + HdfsConstants.HOT_STORAGE_POLICY_NAME + "', '"
+          + HdfsConstants.WARM_STORAGE_POLICY_NAME + "', '" + HdfsConstants.COLD_STORAGE_POLICY_NAME
+          + "', '" + HdfsConstants.ONESSD_STORAGE_POLICY_NAME + "', '"
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + "' or 'PROVIDED'. '"
           + HdfsConstants.MEMORY_STORAGE_POLICY_NAME
-          + " is also available, but since it cannot guarantee data is written to disk in the event "
+          + "' is also available, but since it cannot guarantee data is written to disk in the event "
           + "of a power failure, it is not recommended for use.  There is also some confusion"
-          + "in the documentation about the performance of "
-          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME + " when more than one "
-          + "replicant is specified.  Also note, that only " + HdfsConstants.HOT_STORAGE_POLICY_NAME
-          + ", " + HdfsConstants.COLD_STORAGE_POLICY_NAME + ", and "
-          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + " make sense when using erasure coding."),
+          + "in the documentation about the performance of '"
+          + HdfsConstants.MEMORY_STORAGE_POLICY_NAME + "' when more than one "
+          + "replicant is specified.  Also note, that only '"
+          + HdfsConstants.HOT_STORAGE_POLICY_NAME + "', '" + HdfsConstants.COLD_STORAGE_POLICY_NAME
+          + "', and '" + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME
+          + "' make sense when using erasure coding."),
   @Experimental
   TABLE_CODING_POLICY("table.hdfs.policy.encoding", Constants.HDFS_REPLICATION, PropertyType.STRING,
       "The HDFS erasure coding (EC) policy to apply to the directory tree holding the tablets "
           + "for the table.  The default of 'replication' uses standard HDFS block replication, "
           + "subject to defaults set elsewhere.  Other policies will vary depending on the HDFS "
-          + "configuration.  RS-6-3-64k seems to be a good balance between scan performance and "
+          + "configuration.  'RS-6-3-64k' seems to be a good balance between scan performance and "
           + "random seek latency."),
 
   // VFS ClassLoader properties
@@ -1253,50 +1254,6 @@ public enum Property {
         || key.startsWith(Property.GENERAL_ARBITRARY_PROP_PREFIX.getKey())
         || key.startsWith(VFS_CONTEXT_CLASSPATH_PROPERTY.getKey())
         || key.startsWith(REPLICATION_PREFIX.getKey());
-  }
-
-  // added in hadoop 3.1, but need to support compilation against
-  // hadoop 3.0. replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
-  // when 3.0 support is not longer required.
-  private static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
-
-  // since these are pre-defined we can check here
-  private static boolean validStoragePolicy(final String value) {
-    if (HdfsConstants.HOT_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.COLD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
-        || PROVIDED_STORAGE_POLICY_NAME.equals(value))
-      return true;
-    return false;
-  }
-
-  /**
-   * Checks if the given property and value are valid for HDFS storage or encoding policy. Returns
-   * false if the key is not allowed, or if the value is invalid for the given key. The value
-   * checking only works for storage policy since encoding policies can have arbitrary names.
-   *
-   * @param key
-   *          property key
-   * @param value
-   *          property value
-   * @return true if this is a valid key,value pair for setting HDFS policy
-   */
-  public static boolean isValidHdfsPolicy(String key, String value) {
-    if (key == null)
-      return false;
-
-    if (key.equals(Property.TABLE_CODING_POLICY.getKey())) {
-      // can't really check here since the values are user configurable,
-      // so just return true
-      return true;
-    } else if (key.equals(Property.TABLE_STORAGE_POLICY.getKey())) {
-      return validStoragePolicy(value);
-    }
-    // not a known HDFS policy or not a policy key
-    return false;
   }
 
   /**

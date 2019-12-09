@@ -120,4 +120,9 @@ public class Constants {
 
   // used to indicate normal hdfs replication, rather than erasure coding
   public static final String HDFS_REPLICATION = ErasureCodeConstants.REPLICATION_POLICY_NAME;
+
+  // added in hadoop 3.1, but need to support compilation against
+  // hadoop 3.0. replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
+  // when 3.0 support is not longer required.
+  public static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
 }

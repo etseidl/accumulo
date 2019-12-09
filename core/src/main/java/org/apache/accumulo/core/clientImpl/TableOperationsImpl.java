@@ -951,10 +951,10 @@ public class TableOperationsImpl extends TableOperationsHelper {
   }
 
   private boolean validProperty(final String property, final String value) {
-    if (property.equals(Property.TABLE_STORAGE_POLICY.getKey())
-        || property.equals(Property.TABLE_CODING_POLICY.getKey()))
-      return Property.isValidHdfsPolicy(property, value);
-    return true;
+    Property p = Property.getPropertyByKey(property);
+    if (p == null)
+      return false;
+    return p.getType().isValidFormat(value);
   }
 
   @Override
