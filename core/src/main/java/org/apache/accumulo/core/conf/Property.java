@@ -835,7 +835,8 @@ public enum Property {
           + "table.  Can be one of '" + HdfsConstants.HOT_STORAGE_POLICY_NAME + "', '"
           + HdfsConstants.WARM_STORAGE_POLICY_NAME + "', '" + HdfsConstants.COLD_STORAGE_POLICY_NAME
           + "', '" + HdfsConstants.ONESSD_STORAGE_POLICY_NAME + "', '"
-          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + "' or 'PROVIDED'. '"
+          + HdfsConstants.ALLSSD_STORAGE_POLICY_NAME + "' or '"
+          + Constants.PROVIDED_STORAGE_POLICY_NAME + "'. '"
           + HdfsConstants.MEMORY_STORAGE_POLICY_NAME
           + "' is also available, but since it cannot guarantee data is written to disk in the event "
           + "of a power failure, it is not recommended for use.  There is also some confusion"
@@ -848,7 +849,8 @@ public enum Property {
   @Experimental
   TABLE_CODING_POLICY("table.hdfs.policy.encoding", Constants.HDFS_REPLICATION, PropertyType.STRING,
       "The HDFS erasure coding (EC) policy to apply to the directory tree holding the tablets "
-          + "for the table.  The default of 'replication' uses standard HDFS block replication, "
+          + "for the table.  The default of '" + Constants.HDFS_REPLICATION
+          + "' uses standard HDFS block replication, "
           + "subject to defaults set elsewhere.  Other policies will vary depending on the HDFS "
           + "configuration.  'RS-6-3-64k' seems to be a good balance between scan performance and "
           + "random seek latency."),
