@@ -25,62 +25,67 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.NamespaceNotFoundException;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.junit.Rule;
+import org.apache.accumulo.core.conf.PropertyType;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class NamespaceOperationsImplTest {
+  private NamespaceOperationsImpl namespaceOpsImpl;
 
-  @Test(expected = IllegalArgumentException.class)
-  public void setInvalidStoragePolicyThrowsExcept()
-      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+  @Before
+  public void setup() {
     ClientContext context = new ClientContext(new Properties());
     TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-    NamespaceOperationsImpl namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
+    namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void setNullNamespaceThrowsExcept()
+          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+    namespaceOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), "none");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void setNullKeyThrowsExcept()
+          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+    namespaceOpsImpl.setProperty("foo", null, "none");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void setNullValueThrowsExcept()
+          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+    namespaceOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void setInvalidKeyThrowsExcept()
+          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+    namespaceOpsImpl.setProperty("foo", "nosuchproperty", "none");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void setInvalidValueThrowsExcept()
+          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "SPICY");
   }
 
-  // the next three just need to validate we get past the arguments checking...
-  // will throw AccumuloException because instance.name property not set
-  @Rule
-  public ExpectedException illegalArg = ExpectedException.none();
-
   @Test
-  public void setEncodingPolicy()
-      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
-    ClientContext context = new ClientContext(new Properties());
-    TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-    NamespaceOperationsImpl namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
+  public void testSetDefaults() {
+    for (Property p : Property.values()) {
+      // only need to test table properties
+      if (p.getType().equals(PropertyType.PREFIX) || !Property.isValidTablePropertyKey(p.getKey()))
+        continue;
 
-    illegalArg.expect(AccumuloException.class);
-    illegalArg.expectMessage("instance.name must be set!");
-    namespaceOpsImpl.setProperty("foo", Property.TABLE_CODING_POLICY.getKey(), "something");
-  }
-
-  @Test
-  public void setStoragePolicy()
-      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
-    ClientContext context = new ClientContext(new Properties());
-    TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-    NamespaceOperationsImpl namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
-
-    illegalArg.expect(AccumuloException.class);
-    illegalArg.expectMessage("instance.name must be set!");
-    namespaceOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(),
-        HdfsConstants.HOT_STORAGE_POLICY_NAME);
-  }
-
-  @Test
-  public void setProvidedStoragePolicy()
-      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
-    ClientContext context = new ClientContext(new Properties());
-    TableOperationsImpl tableOpsImpl = new TableOperationsImpl(context);
-    NamespaceOperationsImpl namespaceOpsImpl = new NamespaceOperationsImpl(context, tableOpsImpl);
-
-    illegalArg.expect(AccumuloException.class);
-    illegalArg.expectMessage("instance.name must be set!");
-    namespaceOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "PROVIDED");
+      // just need to validate we get past the arguments checking...
+      // will throw AccumuloException because instance.name property not set
+      try {
+        namespaceOpsImpl.setProperty("foo", p.getKey(), p.getDefaultValue());
+      } catch (AccumuloException ae) {
+        if (!ae.getMessage().contains("instance.name must be set"))
+          throw new RuntimeException("test failed for property " + p.getKey());
+      } catch (Exception e) {
+        throw new RuntimeException("test failed for property " + p.getKey(), e);
+      }
+    }
   }
 }
