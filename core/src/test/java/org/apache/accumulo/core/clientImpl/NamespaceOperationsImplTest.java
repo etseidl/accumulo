@@ -31,6 +31,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public class NamespaceOperationsImplTest {
   private NamespaceOperationsImpl namespaceOpsImpl;
 
@@ -43,31 +45,33 @@ public class NamespaceOperationsImplTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void setNullNamespaceThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), "none");
   }
 
+  @SuppressFBWarnings(value = "NP_NULL_PARAM_DEREF_ALL_TARGETS_DANGEROUS",
+      justification = "testing null value")
   @Test(expected = IllegalArgumentException.class)
   public void setNullKeyThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty("foo", null, "none");
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void setNullValueThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), null);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void setInvalidKeyThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty("foo", "nosuchproperty", "none");
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void setInvalidValueThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     namespaceOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "SPICY");
   }
 
@@ -95,7 +99,8 @@ public class NamespaceOperationsImplTest {
   public ExpectedException illegalArg = ExpectedException.none();
 
   @Test
-  public void setCustomProperty() throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
+  public void setCustomProperty()
+      throws AccumuloException, AccumuloSecurityException, NamespaceNotFoundException {
     // just need to validate we get past the arguments checking...
     // will throw AccumuloException because instance.name property not set
     illegalArg.expect(AccumuloException.class);

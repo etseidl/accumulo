@@ -174,7 +174,7 @@ public class NamespaceOperationsImpl extends NamespaceOperationsHelper {
   private boolean validProperty(final String property, final String value) {
     Property p = Property.getPropertyByKey(property);
     return (p == null || p.getType().isValidFormat(value))
-            && Property.isValidTablePropertyKey(property);
+        && Property.isValidTablePropertyKey(property);
   }
 
   @Override

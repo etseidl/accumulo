@@ -30,6 +30,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public class TableOperationsImplTest {
   private TableOperationsImpl tableOpsImpl;
 
@@ -40,32 +42,29 @@ public class TableOperationsImplTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void setNullTableNameThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException {
+  public void setNullTableNameThrowsExcept() throws AccumuloException, AccumuloSecurityException {
     tableOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), "none");
   }
 
+  @SuppressFBWarnings(value = "NP_NULL_PARAM_DEREF_ALL_TARGETS_DANGEROUS",
+      justification = "testing null value")
   @Test(expected = IllegalArgumentException.class)
-  public void setNullKeyThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException {
+  public void setNullKeyThrowsExcept() throws AccumuloException, AccumuloSecurityException {
     tableOpsImpl.setProperty("foo", null, "none");
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void setNullValueThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException {
+  public void setNullValueThrowsExcept() throws AccumuloException, AccumuloSecurityException {
     tableOpsImpl.setProperty(null, Property.INSTANCE_VOLUMES.getKey(), null);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void setInvalidKeyThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException {
+  public void setInvalidKeyThrowsExcept() throws AccumuloException, AccumuloSecurityException {
     tableOpsImpl.setProperty("foo", "nosuchproperty", "none");
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void setInvalidValueThrowsExcept()
-          throws AccumuloException, AccumuloSecurityException {
+  public void setInvalidValueThrowsExcept() throws AccumuloException, AccumuloSecurityException {
     tableOpsImpl.setProperty("foo", Property.TABLE_STORAGE_POLICY.getKey(), "SPICY");
   }
 
