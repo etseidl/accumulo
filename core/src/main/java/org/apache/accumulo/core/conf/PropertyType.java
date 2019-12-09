@@ -41,7 +41,6 @@ import com.google.common.base.Preconditions;
  * valid values match. All of these fields are optional.
  */
 public enum PropertyType {
-
   PREFIX(null, x -> false, null),
 
   TIMEDURATION("duration", boundedUnits(0, Long.MAX_VALUE, true, "", "ms", "s", "m", "h", "d"),
