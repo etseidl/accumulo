@@ -1260,50 +1260,6 @@ public enum Property {
         || key.startsWith(REPLICATION_PREFIX.getKey());
   }
 
-  // added in hadoop 3.1, but need to support compilation against
-  // hadoop 3.0. replace with HdfsConstants.PROVIDED_STORAGE_POLICY_NAME
-  // when 3.0 support is not longer required.
-  private static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
-
-  // since these are pre-defined we can check here
-  private static boolean validStoragePolicy(final String value) {
-    if (HdfsConstants.HOT_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.COLD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.WARM_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.ALLSSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.ONESSD_STORAGE_POLICY_NAME.equals(value)
-        || HdfsConstants.MEMORY_STORAGE_POLICY_NAME.equals(value)
-        || PROVIDED_STORAGE_POLICY_NAME.equals(value))
-      return true;
-    return false;
-  }
-
-  /**
-   * Checks if the given property and value are valid for HDFS storage or encoding policy. Returns
-   * false if the key is not allowed, or if the value is invalid for the given key. The value
-   * checking only works for storage policy since encoding policies can have arbitrary names.
-   *
-   * @param key
-   *          property key
-   * @param value
-   *          property value
-   * @return true if this is a valid key,value pair for setting HDFS policy
-   */
-  public static boolean isValidHdfsPolicy(String key, String value) {
-    if (key == null)
-      return false;
-
-    if (key.equals(Property.TABLE_CODING_POLICY.getKey())) {
-      // can't really check here since the values are user configurable,
-      // so just return true
-      return true;
-    } else if (key.equals(Property.TABLE_STORAGE_POLICY.getKey())) {
-      return validStoragePolicy(value);
-    }
-    // not a known HDFS policy or not a policy key
-    return false;
-  }
-
   /**
    * Gets a {@link Property} instance with the given key.
    *
