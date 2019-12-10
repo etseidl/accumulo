@@ -402,13 +402,11 @@ public class VolumeManagerImpl implements VolumeManager {
             && !storagePolicy.equals(COLD_STORAGE_POLICY_NAME)
             && !storagePolicy.equals(ALLSSD_STORAGE_POLICY_NAME)) {
           log.error("invalid storage policy {} with erasure coded directory", storagePolicy);
-          // FIXME should this throw exception or just return?
-          // throw new IOException("invalid storage policy");
           return;
         }
       }
 
-      // see if they differ, if they do set to new. how to set to repl if already EC?
+      // see if policies differ, if they do set to new.
       // currEC == null is replication, encoding null or Constants.HDFS_REPLICATION is replication
       if (currEC == null) {
         if (encoding != null && !encoding.equals(Constants.HDFS_REPLICATION)) {
