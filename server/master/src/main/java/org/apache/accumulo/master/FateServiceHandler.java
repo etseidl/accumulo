@@ -51,7 +51,6 @@ import org.apache.accumulo.core.clientImpl.thrift.TableOperation;
 import org.apache.accumulo.core.clientImpl.thrift.TableOperationExceptionType;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.clientImpl.thrift.ThriftTableOperationException;
-import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.data.NamespaceId;
 import org.apache.accumulo.core.data.TableId;
 import org.apache.accumulo.core.iteratorsImpl.system.SystemIteratorUtil;
@@ -76,8 +75,6 @@ import org.apache.accumulo.master.tableOps.merge.TableRangeOp;
 import org.apache.accumulo.master.tableOps.namespace.create.CreateNamespace;
 import org.apache.accumulo.master.tableOps.namespace.delete.DeleteNamespace;
 import org.apache.accumulo.master.tableOps.namespace.rename.RenameNamespace;
-import org.apache.accumulo.master.tableOps.propertyChange.NamespacePropertyChanged;
-import org.apache.accumulo.master.tableOps.propertyChange.TablePropertyChanged;
 import org.apache.accumulo.master.tableOps.rename.RenameTable;
 import org.apache.accumulo.master.tableOps.tableExport.ExportTable;
 import org.apache.accumulo.master.tableOps.tableImport.ImportTable;
@@ -155,22 +152,6 @@ class FateServiceHandler implements FateService.Iface {
 
         master.fate.seedTransaction(opid, new TraceRepo<>(new DeleteNamespace(namespaceId)),
             autoCleanup);
-        break;
-      }
-      case NAMESPACE_PROPERTY_CHANGE: {
-        TableOperation tableOp = TableOperation.PROPERTY_CHANGE;
-        validateArgumentCount(arguments, tableOp, 3);
-        String namespace = validateNamespaceArgument(arguments.get(0), tableOp,
-            Namespaces.NOT_DEFAULT.and(Namespaces.NOT_ACCUMULO));
-        validatePropertyChangeArgument(arguments.get(1), arguments.get(2), tableOp);
-
-        NamespaceId namespaceId =
-            ClientServiceHandler.checkNamespaceId(master.getContext(), namespace, tableOp);
-        if (!master.security.canAlterNamespace(c, namespaceId))
-          throw new ThriftSecurityException(c.getPrincipal(), SecurityErrorCode.PERMISSION_DENIED);
-
-        master.fate.seedTransaction(opid,
-            new TraceRepo<>(new NamespacePropertyChanged(namespaceId)), autoCleanup);
         break;
       }
       case TABLE_CREATE: {
@@ -579,7 +560,7 @@ class FateServiceHandler implements FateService.Iface {
             autoCleanup);
         break;
       }
-      case TABLE_BULK_IMPORT2: {
+      case TABLE_BULK_IMPORT2:
         TableOperation tableOp = TableOperation.BULK_IMPORT;
         validateArgumentCount(arguments, tableOp, 3);
         TableId tableId = validateTableIdArgument(arguments.get(0), tableOp, NOT_ROOT_ID);
@@ -609,31 +590,6 @@ class FateServiceHandler implements FateService.Iface {
         master.fate.seedTransaction(opid,
             new TraceRepo<>(new PrepBulkImport(tableId, dir, setTime)), autoCleanup);
         break;
-      }
-      case TABLE_PROPERTY_CHANGE: {
-        TableOperation tableOp = TableOperation.PROPERTY_CHANGE;
-        validateArgumentCount(arguments, tableOp, 3);
-        String tableName = validateTableNameArgument(arguments.get(0), tableOp, NOT_SYSTEM);
-        validatePropertyChangeArgument(arguments.get(1), arguments.get(2), tableOp);
-
-        final TableId tableId =
-            ClientServiceHandler.checkTableId(master.getContext(), tableName, tableOp);
-        NamespaceId namespaceId = getNamespaceIdFromTableId(tableOp, tableId);
-
-        final boolean canAlterTable;
-        try {
-          canAlterTable = master.security.canAlterTable(c, tableId, namespaceId);
-        } catch (ThriftSecurityException e) {
-          throwIfTableMissingSecurityException(e, tableId, tableName, TableOperation.DELETE);
-          throw e;
-        }
-
-        if (!canAlterTable)
-          throw new ThriftSecurityException(c.getPrincipal(), SecurityErrorCode.PERMISSION_DENIED);
-        master.fate.seedTransaction(opid,
-            new TraceRepo<>(new TablePropertyChanged(namespaceId, tableId)), autoCleanup);
-        break;
-      }
       default:
         throw new UnsupportedOperationException();
     }
@@ -718,19 +674,6 @@ class FateServiceHandler implements FateService.Iface {
     if (!master.security.authenticateUser(credentials, credentials))
       throw new ThriftSecurityException(credentials.getPrincipal(),
           SecurityErrorCode.BAD_CREDENTIALS);
-  }
-
-  // check that the notification is regarding HDFS policy properties
-  private void validatePropertyChangeArgument(ByteBuffer propChangedArg, ByteBuffer newValueArg,
-      TableOperation op) throws ThriftTableOperationException {
-    String propChanged = propChangedArg == null ? null : ByteBufferUtil.toString(propChangedArg);
-    String propValue = newValueArg == null ? null : ByteBufferUtil.toString(newValueArg);
-    if (propChanged == null || !propChanged.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey())
-        || propValue == null || (op.equals(TableOperation.PROPERTY_CHANGE)
-            && !Property.isValidHdfsPolicy(propChanged, propValue)))
-      throw new ThriftTableOperationException(null, propChanged, op,
-          TableOperationExceptionType.INVALID_NAME,
-          "invalid property change notification " + propChanged + "=" + propValue);
   }
 
   // Verify table name arguments are valid, and match any additional restrictions

@@ -967,13 +967,6 @@ public class TableOperationsImpl extends TableOperationsHelper {
       setPropertyNoChecks(tableName, property, value);
 
       checkLocalityGroups(tableName, property);
-
-      // if the storage or encoding policy was changed, send message to update
-      // table directories. if policy is invalid, we'll wind up with
-      // bad data in zookeeper, but the operation should finish with a
-      // warning message. user will have to try again and correct error.
-      if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-        propertyChanged(tableName, property, value);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -995,11 +988,6 @@ public class TableOperationsImpl extends TableOperationsHelper {
       removePropertyNoChecks(tableName, property);
 
       checkLocalityGroups(tableName, property);
-
-      // if the storage or encoding policy was changed, send message to update
-      // table directories
-      if (property.startsWith(Property.TABLE_HDFS_POLICY_PREFIX.getKey()))
-        propertyChanged(tableName, property, null);
     } catch (TableNotFoundException e) {
       throw new AccumuloException(e);
     }
@@ -1025,22 +1013,6 @@ public class TableOperationsImpl extends TableOperationsHelper {
             + "order may help.  Even though this warning was displayed, the property was updated. "
             + "Please check your config to ensure consistency.", e);
       }
-    }
-  }
-
-  private void propertyChanged(final String tableName, final String propChanged, final String value)
-      throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
-    List<ByteBuffer> args = Arrays.asList(ByteBuffer.wrap(tableName.getBytes(UTF_8)),
-        ByteBuffer.wrap(propChanged.getBytes(UTF_8)),
-        ByteBuffer.wrap((value == null ? Constants.PROPERTY_REMOVED : value).getBytes(UTF_8)));
-    Map<String,String> opts = new HashMap<>();
-
-    try {
-      doTableFateOperation(tableName, TableNotFoundException.class,
-          FateOperation.TABLE_PROPERTY_CHANGE, args, opts);
-    } catch (TableExistsException e) {
-      // should not happen
-      throw new AssertionError(e);
     }
   }
 

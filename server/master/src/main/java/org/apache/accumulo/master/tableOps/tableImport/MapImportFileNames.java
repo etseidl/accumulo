@@ -32,7 +32,6 @@ import org.apache.accumulo.core.file.FileOperations;
 import org.apache.accumulo.fate.Repo;
 import org.apache.accumulo.master.Master;
 import org.apache.accumulo.master.tableOps.MasterRepo;
-import org.apache.accumulo.master.tableOps.Utils;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.tablets.UniqueNameAllocator;
 import org.apache.accumulo.server.util.Policies;

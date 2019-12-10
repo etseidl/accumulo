@@ -42,9 +42,7 @@ public enum FateOperation implements org.apache.thrift.TEnum {
   NAMESPACE_CREATE(13),
   NAMESPACE_DELETE(14),
   NAMESPACE_RENAME(15),
-  TABLE_BULK_IMPORT2(16),
-  TABLE_PROPERTY_CHANGE(17),
-  NAMESPACE_PROPERTY_CHANGE(18);
+  TABLE_BULK_IMPORT2(16);
 
   private final int value;
 
@@ -100,10 +98,6 @@ public enum FateOperation implements org.apache.thrift.TEnum {
         return NAMESPACE_RENAME;
       case 16:
         return TABLE_BULK_IMPORT2;
-      case 17:
-        return TABLE_PROPERTY_CHANGE;
-      case 18:
-        return NAMESPACE_PROPERTY_CHANGE;
       default:
         return null;
     }
