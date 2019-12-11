@@ -377,12 +377,11 @@ public class VolumeManagerImpl implements VolumeManager {
   @Override
   public void checkDirPolicies(Path path, Policies policies) throws IOException {
     FileSystem fs = getVolumeByPath(path).getFileSystem();
-    // check that path exists...it may not yet, which is ok. just return
-    if (!fs.exists(path)) {
-      log.debug("check {}: path does not exist", path);
+
+    if (!(fs instanceof DistributedFileSystem))
       return;
-    }
-    if (fs instanceof DistributedFileSystem) {
+
+    try {
       DistributedFileSystem dfs = (DistributedFileSystem) fs;
       BlockStoragePolicySpi currPolicy = dfs.getStoragePolicy(path);
       ErasureCodingPolicy currEC = dfs.getErasureCodingPolicy(path);
@@ -436,6 +435,9 @@ public class VolumeManagerImpl implements VolumeManager {
         log.debug("set SP to {} from {} for path {}", storagePolicy, currPolicy.getName(), path);
         dfs.setStoragePolicy(path, storagePolicy);
       }
+    } catch (FileNotFoundException ex) {
+      // dir might not exist yet, that's ok, just ignore
+      log.debug("check {}: path does not exist", path);
     }
   }
 
