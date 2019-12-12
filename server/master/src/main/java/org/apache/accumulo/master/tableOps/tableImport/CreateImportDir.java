@@ -59,7 +59,6 @@ class CreateImportDir extends MasterRepo {
 
     Path newBulkDir = new Path(directory, Constants.BULK_PREFIX + namer.getNextName());
 
-    tableInfo.importParent = directory.toString();
     tableInfo.importDir = newBulkDir.toString();
 
     log.info("Using import dir: " + tableInfo.importDir);

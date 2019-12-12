@@ -50,7 +50,6 @@ import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.ServerContext;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.tablets.UniqueNameAllocator;
-import org.apache.accumulo.server.util.Policies;
 import org.apache.accumulo.server.zookeeper.TransactionWatcher;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileStatus;
@@ -216,19 +215,13 @@ public class PrepBulkImport extends MasterRepo {
     String tableDir = tempPath.toString();
     if (tableDir == null)
       throw new IOException(bulkInfo.sourceDir + " is not in a volume configured for Accumulo");
-
-    // need to get storage and ec policies for table
-    var policies =
-        Policies.getPoliciesForTable(context.getServerConfFactory().getTableConfiguration(tableId));
-
     Path directory = new Path(tableDir + "/" + tableId);
-    fs.mkdirs(directory, policies);
+    fs.mkdirs(directory);
 
     UniqueNameAllocator namer = context.getUniqueNameAllocator();
     while (true) {
       Path newBulkDir = new Path(directory, Constants.BULK_PREFIX + namer.getNextName());
-      // children should inherit policy, but setting explicitly just in case
-      if (fs.mkdirs(newBulkDir, policies))
+      if (fs.mkdirs(newBulkDir))
         return newBulkDir;
       log.warn("Failed to create {} for unknown reason", newBulkDir);
 

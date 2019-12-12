@@ -31,7 +31,6 @@ class ImportedTableInfo implements Serializable {
   public String user;
   public String tableName;
   public TableId tableId;
-  public String importParent;
   public String importDir;
   public NamespaceId namespaceId;
 }
