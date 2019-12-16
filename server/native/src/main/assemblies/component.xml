@@ -46,5 +46,11 @@
       <directoryMode>0755</directoryMode>
       <fileMode>0644</fileMode>
     </fileSet>
+    <fileSet>
+      <directory>../../core/target/native/javah</directory>
+      <outputDirectory>javah</outputDirectory>
+      <directoryMode>0755</directoryMode>
+      <fileMode>0644</fileMode>
+    </fileSet>
   </fileSets>
 </component>
