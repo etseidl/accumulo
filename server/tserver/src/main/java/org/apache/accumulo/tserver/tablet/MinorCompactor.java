@@ -37,6 +37,8 @@ import org.apache.accumulo.core.metadata.StoredTabletFile;
 import org.apache.accumulo.core.metadata.TabletFile;
 import org.apache.accumulo.core.metadata.schema.DataFileValue;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
+import org.apache.accumulo.core.util.RegionTimer;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.core.util.ratelimit.RateLimiter;
 import org.apache.accumulo.server.conf.TableConfiguration;
 import org.apache.accumulo.server.problems.ProblemReport;
@@ -112,6 +114,7 @@ public class MinorCompactor extends Compactor {
 
   @Override
   public CompactionStats call() {
+    RegionTimer regtimer = TimerManager.timerForThread();
     final String outputFileName = getOutputFile();
     log.trace("Begin minor compaction {} {}", outputFileName, getExtent());
 
@@ -122,6 +125,7 @@ public class MinorCompactor extends Compactor {
     boolean reportedProblem = false;
 
     runningCompactions.add(this);
+    regtimer.enter("MinorCompactor:call");
     try {
       do {
         try {
@@ -175,6 +179,7 @@ public class MinorCompactor extends Compactor {
 
       } while (true);
     } finally {
+      regtimer.exit("MinorCompactor:call");
       thread = null;
       runningCompactions.remove(this);
     }

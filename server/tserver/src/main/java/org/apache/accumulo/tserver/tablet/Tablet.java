@@ -94,7 +94,9 @@ import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
 import org.apache.accumulo.core.trace.TraceUtil;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.Pair;
+import org.apache.accumulo.core.util.RegionTimer;
 import org.apache.accumulo.core.util.ShutdownUtil;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.core.util.ratelimit.RateLimiter;
 import org.apache.accumulo.core.volume.Volume;
 import org.apache.accumulo.server.ServerConstants;
@@ -813,6 +815,8 @@ public class Tablet {
     try {
       Thread.currentThread().setName("Minor compacting " + this.extent);
       CompactionStats stats;
+      RegionTimer regtimer = TimerManager.timerForThread();
+      regtimer.enter("minorCompact:write");
       try (TraceScope span = Trace.startSpan("write")) {
         count = memTable.getNumEntries();
 
@@ -824,12 +828,17 @@ public class Tablet {
         MinorCompactor compactor = new MinorCompactor(tabletServer, this, memTable, mergeFile, dfv,
             tmpDatafile, mincReason, tableConfiguration);
         stats = compactor.call();
+      } finally {
+        regtimer.exit("minorCompact:write");
       }
 
+      regtimer.enter("minorCompact:bringOnline");
       try (TraceScope span = Trace.startSpan("bringOnline")) {
         getDatafileManager().bringMinorCompactionOnline(tmpDatafile, newDatafile, mergeFile,
             new DataFileValue(stats.getFileSize(), stats.getEntriesWritten()), commitSession,
             flushId);
+      } finally {
+        regtimer.exit("minorCompact:bringOnline");
       }
       return new DataFileValue(stats.getFileSize(), stats.getEntriesWritten());
     } catch (Exception | Error e) {
@@ -1676,6 +1685,8 @@ public class Tablet {
 
     long t1, t2, t3;
 
+    RegionTimer regtimer = TimerManager.timerForThread();
+
     Pair<Long,UserCompactionConfig> compactionId = null;
     CompactionStrategy strategy = null;
     Map<StoredTabletFile,Pair<Key,Key>> firstAndLastKeys = null;
@@ -1847,6 +1858,7 @@ public class Tablet {
 
         AccumuloConfiguration tableConf = createCompactionConfiguration(tableConfiguration, plan);
 
+        regtimer.enter("Tablet:compactFiles");
         try (TraceScope span = Trace.startSpan("compactFiles")) {
           CompactionEnv cenv = new CompactionEnv() {
             @Override
@@ -1913,6 +1925,8 @@ public class Tablet {
             filesToCompact.put(newTabletFile,
                 new DataFileValue(mcs.getFileSize(), mcs.getEntriesWritten()));
           }
+        } finally {
+          regtimer.exit("Tablet:compactFiles");
         }
 
       } while (filesToCompact.size() > 0);
@@ -1991,7 +2005,6 @@ public class Tablet {
    * Performs a major compaction on the tablet. If needsSplit() returns true, the tablet is split
    * and a reference to the new tablet is returned.
    */
-
   CompactionStats majorCompact(MajorCompactionReason reason, long queued) {
     CompactionStats majCStats = null;
     boolean success = false;
@@ -2014,6 +2027,8 @@ public class Tablet {
     double tracePercent =
         tabletServer.getConfiguration().getFraction(Property.TSERV_MAJC_TRACE_PERCENT);
     ProbabilitySampler sampler = TraceUtil.probabilitySampler(tracePercent);
+    RegionTimer regtimer = TimerManager.timerForThread();
+    regtimer.enter("Tablet:majorCompact");
     try (TraceScope span = Trace.startSpan("majorCompaction", sampler)) {
 
       majCStats = _majorCompact(reason);
@@ -2023,12 +2038,14 @@ public class Tablet {
         getTabletServer()
             .enqueueMasterMessage(new TabletStatusMessage(TabletLoadState.CHOPPED, extent));
       }
+      regtimer.exit("Tablet:majorCompact");
       if (span.getSpan() != null) {
         span.getSpan().addKVAnnotation("extent", ("" + getExtent()));
         if (majCStats != null) {
           span.getSpan().addKVAnnotation("read", ("" + majCStats.getEntriesRead()));
           span.getSpan().addKVAnnotation("written", ("" + majCStats.getEntriesWritten()));
         }
+        span.getSpan().addKVAnnotation("timing", regtimer.toJSON());
       }
       success = true;
     } catch (CompactionCanceledException cce) {
@@ -2038,6 +2055,8 @@ public class Tablet {
     } catch (RuntimeException e) {
       log.error("MajC Unexpected exception, extent = " + getExtent(), e);
     } finally {
+      // clean up timer stuff
+      TimerManager.removeTimerForThread();
       // ensure we always reset boolean, even
       // when an exception is thrown
       synchronized (this) {
