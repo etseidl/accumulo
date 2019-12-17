@@ -54,12 +54,7 @@ public class TimedIO {
   private static final String KEY_WRITE_TO_HDFS = "writeToHdfs";
 
   // set on command line: -Daccumulo.timing=true
-  static final boolean isTiming;
-
-  static {
-    var t = System.getProperty("accumulo.timing", "false").trim();
-    isTiming = t.equalsIgnoreCase("true");
-  }
+  static final boolean isTiming = TimerManager.isTiming();
 
   static class TimedSimpleBufferedOutputStream extends SimpleBufferedOutputStream {
     public TimedSimpleBufferedOutputStream(OutputStream out, byte[] buf) {

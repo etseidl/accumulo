@@ -2045,7 +2045,9 @@ public class Tablet {
           span.getSpan().addKVAnnotation("read", ("" + majCStats.getEntriesRead()));
           span.getSpan().addKVAnnotation("written", ("" + majCStats.getEntriesWritten()));
         }
-        span.getSpan().addKVAnnotation("timing", regtimer.toJSON());
+        if (TimerManager.isTiming()) {
+          span.getSpan().addKVAnnotation("timing", regtimer.toJSON());
+        }
       }
       success = true;
     } catch (CompactionCanceledException cce) {

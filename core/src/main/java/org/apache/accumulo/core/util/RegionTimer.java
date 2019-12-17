@@ -51,7 +51,7 @@ public class RegionTimer {
 
   public RegionTimer(String topname, boolean cpu_time, boolean wall_time, boolean counts) {
     wall_time_ = wall_time;
-    cpu_time_ = cpu_time;
+    cpu_time_ = cpu_time && TimerManager.isTiming();
     count_ = counts;
     top_ = new TimedRegion(topname);
     if (count_)

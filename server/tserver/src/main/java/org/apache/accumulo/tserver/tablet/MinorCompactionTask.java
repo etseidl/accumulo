@@ -106,7 +106,9 @@ class MinorCompactionTask implements Runnable {
           minorCompaction.getSpan().addKVAnnotation("numEntries",
               Long.toString(this.stats.getNumEntries()));
           minorCompaction.getSpan().addKVAnnotation("size", Long.toString(this.stats.getSize()));
-          minorCompaction.getSpan().addKVAnnotation("timing", regtimer.toJSON());
+          if (TimerManager.isTiming()) {
+            minorCompaction.getSpan().addKVAnnotation("timing", regtimer.toJSON());
+          }
         }
       } finally {
         // clean up timer stuff

@@ -19,6 +19,7 @@
 package org.apache.accumulo.core.util;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.util.HashMap;
 
 // singleton to manage per-thread RegionTimer instances.  kind of
@@ -34,21 +35,38 @@ import java.util.HashMap;
 public class TimerManager {
   private static final HashMap<Thread,RegionTimer> sThreadTimers = new HashMap<>();
 
+  private static final RegionTimer NULL_TIMER = new NullTimer("null", false, false, false);
+
+  // set on command line: -Daccumulo.timing=true
+  private static final boolean timing;
+
   static {
-    String envAccumuloHome = System.getenv("ACCUMULO_HOME");
-    File nativeDir = new File(envAccumuloHome + "/lib/native");
-    String libname = System.mapLibraryName("accumulo");
-    File libFile = new File(nativeDir, libname);
-    System.out.println("load " + libFile.getAbsolutePath());
-    try {
-      System.load(libFile.getAbsolutePath());
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw e;
+    var t = System.getProperty("accumulo.timing", "false").trim();
+    timing = t.equalsIgnoreCase("true");
+
+    if (timing) {
+      String envAccumuloHome = System.getenv("ACCUMULO_HOME");
+      File nativeDir = new File(envAccumuloHome + "/lib/native");
+      String libname = System.mapLibraryName("accumulo");
+      File libFile = new File(nativeDir, libname);
+      System.out.println("load " + libFile.getAbsolutePath());
+      try {
+        System.load(libFile.getAbsolutePath());
+      } catch (Exception e) {
+        e.printStackTrace();
+        throw e;
+      }
     }
   }
 
+  public static boolean isTiming() {
+    return timing;
+  }
+
   public static RegionTimer timerForThread() {
+    if (!timing)
+      return NULL_TIMER;
+
     Thread curr = Thread.currentThread();
 
     synchronized (sThreadTimers) {
@@ -62,6 +80,9 @@ public class TimerManager {
   }
 
   public static void setTimerForThread(RegionTimer timer) {
+    if (!timing)
+      return;
+
     Thread curr = Thread.currentThread();
     synchronized (sThreadTimers) {
       // will remove existing timer for this thread if one
@@ -71,6 +92,9 @@ public class TimerManager {
   }
 
   public static RegionTimer removeTimerForThread() {
+    if (!timing)
+      return NULL_TIMER;
+
     Thread curr = Thread.currentThread();
     synchronized (sThreadTimers) {
       if (sThreadTimers.containsKey(curr)) {
@@ -78,5 +102,47 @@ public class TimerManager {
       }
     }
     return null;
+  }
+
+  // RegionTimer with all public methods set to no-ops.
+  private static class NullTimer extends RegionTimer {
+    NullTimer(String nm, boolean cpu, boolean wall, boolean count) {
+      super(nm, cpu, wall, count);
+    }
+
+    @Override
+    public void enter(String name) {}
+
+    @Override
+    public void change(String newname) {}
+
+    @Override
+    public void exit(String name) {}
+
+    @Override
+    public void add_wall_time(String name, double t) {}
+
+    @Override
+    public void add_cpu_time(String name, double t) {}
+
+    @Override
+    public void add_count(String name, long c) {}
+
+    @Override
+    public void add_rd_blks(String name, long c) {}
+
+    @Override
+    public void add_wrt_blks(String name, long c) {}
+
+    @Override
+    public void print() {}
+
+    @Override
+    public void print(PrintStream out) {}
+
+    @Override
+    public String toJSON() {
+      return "";
+    }
   }
 }
