@@ -22,9 +22,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.accumulo.core.util.RegionTimer;
-import org.apache.accumulo.core.util.TimerManager;
-
 /**
  * A simplified BufferedOutputStream with borrowed buffer, and allow users to see how much data have
  * been buffered.
@@ -39,16 +36,10 @@ class SimpleBufferedOutputStream extends FilterOutputStream {
     this.buf = buf;
   }
 
-  private void flushBuffer() throws IOException {
+  protected void flushBuffer() throws IOException {
     if (count > 0) {
-      RegionTimer timer = TimerManager.timerForThread();
-      timer.enter(BCFile.KEY_WRITE_TO_HDFS);
-      try {
-        out.write(buf, 0, count);
-        count = 0;
-      } finally {
-        timer.exit(BCFile.KEY_WRITE_TO_HDFS);
-      }
+      out.write(buf, 0, count);
+      count = 0;
     }
   }
 
@@ -63,15 +54,9 @@ class SimpleBufferedOutputStream extends FilterOutputStream {
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
     if (len >= buf.length) {
-      RegionTimer timer = TimerManager.timerForThread();
-      timer.enter(BCFile.KEY_WRITE_TO_HDFS);
-      try {
-        flushBuffer();
-        out.write(b, off, len);
-        return;
-      } finally {
-        timer.exit(BCFile.KEY_WRITE_TO_HDFS);
-      }
+      flushBuffer();
+      out.write(b, off, len);
+      return;
     }
     if (len > buf.length - count) {
       flushBuffer();
