@@ -638,8 +638,9 @@ public final class Compression {
         }
       }
       CompressionInputStream cis = codec.createInputStream(stream, decompressor);
-      return TimedIO.isTiming ? new BufferedInputStream(new TimedIO.TimedDecompressionStream(cis),
-          DATA_IBUF_SIZE) : new BufferedInputStream(cis, DATA_IBUF_SIZE);
+      return TimedIO.isTiming
+          ? new BufferedInputStream(new TimedIO.TimedDecompressionStream(cis), DATA_IBUF_SIZE)
+          : new BufferedInputStream(cis, DATA_IBUF_SIZE);
     }
 
     /**
