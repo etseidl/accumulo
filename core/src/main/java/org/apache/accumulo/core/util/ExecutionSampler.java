@@ -35,7 +35,7 @@ public class ExecutionSampler implements Runnable, Closeable {
 
   private String name;
   private Thread sampledThread;
-  private Thread myThread;
+  private Thread myThread = null;
   private long sampleMillis;
 
   private long startTime = -1;
@@ -43,6 +43,14 @@ public class ExecutionSampler implements Runnable, Closeable {
 
   private boolean shouldStop = false;
   private HashMap<String,Sample> samples = new HashMap<>();
+
+  // set on command line: -Daccumulo.sampling=true
+  private static final boolean isSampling;
+
+  static {
+    var t = System.getProperty("accumulo.sampling", "false").trim();
+    isSampling = t.equalsIgnoreCase("true");
+  }
 
   private static class Sample implements Comparable<Sample> {
     String name;
@@ -130,6 +138,9 @@ public class ExecutionSampler implements Runnable, Closeable {
   }
 
   public void dumpSamples() {
+    if (!isSampling)
+      return;
+
     if (myThread != null && myThread.isAlive()) {
       System.out.println("cannot dump samples while active");
       return;
@@ -186,9 +197,11 @@ public class ExecutionSampler implements Runnable, Closeable {
    */
   public static ExecutionSampler sample(String name, long millis) {
     ExecutionSampler sampler = new ExecutionSampler(name, millis);
-    Thread samplerThread = new Thread(sampler);
-    sampler.myThread = samplerThread;
-    samplerThread.start();
+    if (isSampling) {
+      Thread samplerThread = new Thread(sampler);
+      sampler.myThread = samplerThread;
+      samplerThread.start();
+    }
     return sampler;
   }
 
@@ -212,16 +225,17 @@ public class ExecutionSampler implements Runnable, Closeable {
   }
 
   public static void main(String[] args) {
-    ExecutionSampler sampler = ExecutionSampler.sample("test", 10);
+    try (var sampler = ExecutionSampler.sample("test", 10)) {
 
-    for (int i = 0; i < 10; i++) {
-      System.out.println(i);
-      long niter = 100000000;
-      foo(niter * 10);
-      bar(niter);
+      for (int i = 0; i < 10; i++) {
+        System.out.println(i);
+        long niter = 100000000;
+        foo(niter * 10);
+        bar(niter);
+      }
+
+      sampler.stop();
+      sampler.dumpSamples();
     }
-
-    sampler.stop();
-    sampler.dumpSamples();
   }
 }
