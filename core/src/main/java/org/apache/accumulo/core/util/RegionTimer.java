@@ -21,12 +21,17 @@ package org.apache.accumulo.core.util;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.management.ObjectName;
 
 public class RegionTimer {
   private static final Logger log = LoggerFactory.getLogger(RegionTimer.class);
@@ -263,7 +268,7 @@ public class RegionTimer {
   }
 
   private double get_wall_time() {
-    return System.currentTimeMillis() / 1000.0;
+    return System.nanoTime() / 1000000000.0;
   }
 
   public void print() {
@@ -460,6 +465,46 @@ public class RegionTimer {
       t.print();
       System.out.println("td = " + td);
       System.out.println(t.toJSON());
+
+      long nn = 10000000;
+      t.enter("regtimer");
+      for (int i = 0; i < nn; i++) {
+        t.enter("bogus");
+        t.exit("bogus");
+      }
+      t.exit("regtimer");
+
+      t.enter("rusage");
+      for (int i = 0; i < nn; i++) {
+        thd1.getRUsage();
+        thd1.getRUsage();
+      }
+      t.exit("rusage");
+
+      t.enter("wall");
+      for (int i = 0; i < nn; i++) {
+        System.currentTimeMillis();
+        System.currentTimeMillis();
+      }
+      t.exit("wall");
+
+      t.enter("nano");
+      for (int i = 0; i < nn; i++) {
+        System.nanoTime();
+        System.nanoTime();
+      }
+      t.exit("nano");
+
+      t.enter("bean");
+
+      var bean = ManagementFactory.getThreadMXBean();
+      for (int i = 0; i < nn; i++) {
+        bean.getCurrentThreadCpuTime();
+        bean.getCurrentThreadCpuTime();
+      }
+      t.exit("bean");
+
+      t.print();
 
       // test error handling
       t.enter("good1");
