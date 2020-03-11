@@ -26,7 +26,6 @@ import org.apache.accumulo.core.metadata.schema.DataFileValue;
 import org.apache.accumulo.core.trace.TraceUtil;
 import org.apache.accumulo.core.util.RegionTimer;
 import org.apache.accumulo.core.util.TimerManager;
-import org.apache.accumulo.server.fs.FileRef;
 import org.apache.accumulo.tserver.MinorCompactionReason;
 import org.apache.accumulo.tserver.compaction.MajorCompactionReason;
 import org.apache.hadoop.fs.Path;
