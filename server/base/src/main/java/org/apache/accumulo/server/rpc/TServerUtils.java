@@ -237,9 +237,10 @@ public class TServerUtils {
       TProtocolFactory protocolFactory, final String serverName, final int numThreads,
       final int numSTThreads, long timeBetweenThreadChecks, long maxMessageSize)
       throws TTransportException {
-
-    final TNonblockingServerSocket transport =
-        new TNonblockingServerSocket(new InetSocketAddress(address.getHost(), address.getPort()));
+    final TNonblockingServerSocket transport = new TNonblockingServerSocket(
+        new TNonblockingServerSocket.NonblockingAbstractServerSocketArgs()
+            .bindAddr(new InetSocketAddress(address.getHost(), address.getPort())).clientTimeout(0)
+            .backlog(1024));
     final CustomNonBlockingServer.Args options = new CustomNonBlockingServer.Args(transport);
 
     options.protocolFactory(protocolFactory);

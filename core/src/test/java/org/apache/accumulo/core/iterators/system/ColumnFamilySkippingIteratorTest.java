@@ -80,7 +80,8 @@ public class ColumnFamilySkippingIteratorTest {
     put(tm1, "r2", "cf2", "cq5", 5, "v5");
     put(tm1, "r3", "cf3", "cq6", 5, "v6");
 
-    ColumnFamilySkippingIterator cfi = new ColumnFamilySkippingIterator(new SortedMapIterator(tm1));
+    ColumnFamilySkippingIterator cfi =
+        new ColumnFamilySkippingIterator(new SortedMapIterator(tm1), 10);
 
     cfi.seek(new Range(), EMPTY_SET, true);
     assertFalse(cfi.hasTop());
@@ -134,7 +135,8 @@ public class ColumnFamilySkippingIteratorTest {
       allColfams.add(new ArrayByteSequence(String.format("%06d", cf)));
     }
 
-    ColumnFamilySkippingIterator cfi = new ColumnFamilySkippingIterator(new SortedMapIterator(tm1));
+    ColumnFamilySkippingIterator cfi =
+        new ColumnFamilySkippingIterator(new SortedMapIterator(tm1), 10);
     HashSet<ByteSequence> colfams = new HashSet<>();
 
     runTest(cfi, 30000, 0, allColfams, colfams);
@@ -214,7 +216,7 @@ public class ColumnFamilySkippingIteratorTest {
     }
 
     CountingIterator ci = new CountingIterator(new SortedMapIterator(tm1));
-    ColumnFamilySkippingIterator cfi = new ColumnFamilySkippingIterator(ci);
+    ColumnFamilySkippingIterator cfi = new ColumnFamilySkippingIterator(ci, 10);
     HashSet<ByteSequence> colfams = new HashSet<>();
     colfams.add(new ArrayByteSequence(String.format("%06d", 4)));
 

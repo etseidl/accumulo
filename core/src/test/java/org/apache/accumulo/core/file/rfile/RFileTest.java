@@ -315,7 +315,7 @@ public class RFileTest {
               CryptoServiceFactory.newInstance(accumuloConfiguration, ClassloaderType.JAVA));
       reader = new RFile.Reader(cb);
       if (cfsi)
-        iter = new ColumnFamilySkippingIterator(reader);
+        iter = new ColumnFamilySkippingIterator(reader, 10);
 
       checkIndex(reader);
     }
@@ -1754,7 +1754,7 @@ public class RFileTest {
     Reader reader = new RFile.Reader(cb);
     checkIndex(reader);
 
-    ColumnFamilySkippingIterator iter = new ColumnFamilySkippingIterator(reader);
+    ColumnFamilySkippingIterator iter = new ColumnFamilySkippingIterator(reader, 10);
 
     for (int start : new int[] {0, 10, 100, 998}) {
       for (int cf = 1; cf <= 4; cf++) {

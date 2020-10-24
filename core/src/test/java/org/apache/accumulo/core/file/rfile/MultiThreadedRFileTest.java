@@ -142,7 +142,7 @@ public class MultiThreadedRFileTest {
       // does not copy any writer resources. This would be for read only.
       copy.reader = (Reader) reader.deepCopy(null);
       copy.rfile = rfile;
-      copy.iter = new ColumnFamilySkippingIterator(copy.reader);
+      copy.iter = new ColumnFamilySkippingIterator(copy.reader, 10);
       copy.deepCopy = true;
 
       checkIndex(copy.reader);
@@ -197,7 +197,7 @@ public class MultiThreadedRFileTest {
       CachableBuilder b = new CachableBuilder().fsPath(fs, path).conf(conf)
           .cryptoService(CryptoServiceFactory.newInstance(defaultConf, ClassloaderType.JAVA));
       reader = new RFile.Reader(new CachableBlockFile.Reader(b));
-      iter = new ColumnFamilySkippingIterator(reader);
+      iter = new ColumnFamilySkippingIterator(reader, 10);
 
       checkIndex(reader);
     }

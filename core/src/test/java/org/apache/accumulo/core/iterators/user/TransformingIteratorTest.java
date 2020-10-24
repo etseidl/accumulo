@@ -82,7 +82,7 @@ public class TransformingIteratorTest {
   private void setUpTransformIterator(Class<? extends TransformingIterator> clazz,
       boolean setupAuths) throws IOException {
     SortedMapIterator source = new SortedMapIterator(data);
-    ColumnFamilySkippingIterator cfsi = new ColumnFamilySkippingIterator(source);
+    ColumnFamilySkippingIterator cfsi = new ColumnFamilySkippingIterator(source, 10);
     SortedKeyValueIterator<Key,Value> visFilter =
         VisibilityFilter.wrap(cfsi, authorizations, new byte[0]);
     ReuseIterator reuserIter = new ReuseIterator();

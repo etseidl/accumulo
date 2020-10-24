@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.PartialKey;
@@ -39,17 +41,19 @@ public class ColumnFamilySkippingIterator extends ServerSkippingIterator
 
   protected Set<ByteSequence> colFamSet = null;
   protected TreeSet<ByteSequence> sortedColFams = null;
+  protected int skipCount = 10;
 
   protected boolean inclusive = false;
   protected Range range;
 
-  public ColumnFamilySkippingIterator(SortedKeyValueIterator<Key,Value> source) {
+  public ColumnFamilySkippingIterator(SortedKeyValueIterator<Key,Value> source, int skipCount) {
     super(source);
+    this.skipCount = skipCount;
   }
 
   protected ColumnFamilySkippingIterator(SortedKeyValueIterator<Key,Value> source,
-      Set<ByteSequence> colFamSet, boolean inclusive) {
-    this(source);
+      Set<ByteSequence> colFamSet, boolean inclusive, int skipCount) {
+    this(source, skipCount);
     this.colFamSet = colFamSet;
     this.inclusive = inclusive;
   }
@@ -60,7 +64,7 @@ public class ColumnFamilySkippingIterator extends ServerSkippingIterator
 
     if (inclusive)
       while (source.hasTop() && !colFamSet.contains(source.getTopKey().getColumnFamilyData())) {
-        if (count < 10) {
+        if (count < skipCount) {
           // it is quicker to call next if we are close, but we never know if we are close
           // so give next a try a few times
           source.next();
@@ -81,7 +85,7 @@ public class ColumnFamilySkippingIterator extends ServerSkippingIterator
       }
     else if (colFamSet != null && colFamSet.size() > 0)
       while (source.hasTop() && colFamSet.contains(source.getTopKey().getColumnFamilyData())) {
-        if (count < 10) {
+        if (count < skipCount) {
           source.next();
           count++;
         } else {
@@ -104,7 +108,7 @@ public class ColumnFamilySkippingIterator extends ServerSkippingIterator
 
   @Override
   public SortedKeyValueIterator<Key,Value> deepCopy(IteratorEnvironment env) {
-    return new ColumnFamilySkippingIterator(source.deepCopy(env), colFamSet, inclusive);
+    return new ColumnFamilySkippingIterator(source.deepCopy(env), colFamSet, inclusive, skipCount);
   }
 
   @Override
@@ -134,4 +138,7 @@ public class ColumnFamilySkippingIterator extends ServerSkippingIterator
     ((InterruptibleIterator) source).setInterruptFlag(flag);
   }
 
+  public static int getSkipCount(AccumuloConfiguration conf) {
+    return Integer.parseInt(conf.get(Property.TABLE_SKIP_NUMBER));
+  }
 }

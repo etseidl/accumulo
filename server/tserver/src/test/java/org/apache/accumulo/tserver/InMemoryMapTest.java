@@ -448,7 +448,7 @@ public class InMemoryMapTest {
     }
 
     MemoryIterator ski1 = imm.skvIterator(null);
-    ColumnFamilySkippingIterator cfsi = new ColumnFamilySkippingIterator(ski1);
+    ColumnFamilySkippingIterator cfsi = new ColumnFamilySkippingIterator(ski1, 10);
 
     imm.delete(0);
 

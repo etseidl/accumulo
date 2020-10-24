@@ -831,6 +831,9 @@ public enum Property {
           + "also consider configuring the `" + NoDeleteConstraint.class.getName() + "` "
           + "constraint."),
   @Experimental
+  TABLE_SKIP_NUMBER("table.skip.number", "10", PropertyType.COUNT,
+      "Number of cells to scan before calling seek"),
+  @Experimental
   TABLE_STORAGE_POLICY("table.hdfs.policy.storage", HdfsConstants.HOT_STORAGE_POLICY_NAME,
       PropertyType.STORAGE_POLICY,
       "HDFS Storage policy to apply to the directory tree holding the tablets for the "

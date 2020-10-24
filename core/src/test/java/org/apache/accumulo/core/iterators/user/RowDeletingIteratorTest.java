@@ -173,7 +173,7 @@ public class RowDeletingIteratorTest {
     put(tm1, "r2", "cf1", "cq1", 5, "v1");
 
     RowDeletingIterator rdi = new RowDeletingIterator();
-    rdi.init(new ColumnFamilySkippingIterator(new SortedMapIterator(tm1)), null,
+    rdi.init(new ColumnFamilySkippingIterator(new SortedMapIterator(tm1), 10), null,
         new TestIE(IteratorScope.scan, false));
 
     HashSet<ByteSequence> cols = new HashSet<>();

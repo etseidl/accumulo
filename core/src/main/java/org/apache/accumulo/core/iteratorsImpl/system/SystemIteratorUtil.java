@@ -101,7 +101,8 @@ public class SystemIteratorUtil {
       byte[] defaultVisibility, AccumuloConfiguration conf) throws IOException {
     SortedKeyValueIterator<Key,Value> delIter =
         DeletingIterator.wrap(source, false, DeletingIterator.getBehavior(conf));
-    ColumnFamilySkippingIterator cfsi = new ColumnFamilySkippingIterator(delIter);
+    ColumnFamilySkippingIterator cfsi =
+        new ColumnFamilySkippingIterator(delIter, ColumnFamilySkippingIterator.getSkipCount(conf));
     SortedKeyValueIterator<Key,Value> colFilter = ColumnQualifierFilter.wrap(cfsi, cols);
     return VisibilityFilter.wrap(colFilter, auths, defaultVisibility);
   }
