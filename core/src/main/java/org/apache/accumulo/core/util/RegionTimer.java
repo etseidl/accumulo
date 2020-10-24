@@ -22,16 +22,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.management.ObjectName;
 
 public class RegionTimer {
   private static final Logger log = LoggerFactory.getLogger(RegionTimer.class);
@@ -495,14 +491,20 @@ public class RegionTimer {
       }
       t.exit("nano");
 
-      t.enter("bean");
-
       var bean = ManagementFactory.getThreadMXBean();
+      t.enter("bean");
       for (int i = 0; i < nn; i++) {
         bean.getCurrentThreadCpuTime();
         bean.getCurrentThreadCpuTime();
       }
       t.exit("bean");
+
+      t.enter("beanu");
+      for (int i = 0; i < nn; i++) {
+        bean.getCurrentThreadUserTime();
+        bean.getCurrentThreadUserTime();
+      }
+      t.exit("beanu");
 
       t.print();
 
