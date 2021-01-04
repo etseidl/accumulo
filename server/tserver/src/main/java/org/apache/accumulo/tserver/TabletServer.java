@@ -439,7 +439,12 @@ public class TabletServer extends AbstractServer {
             // if we need to split AND compact, we need a good way
             // to decide what to do
             if (tablet.needsSplit()) {
-              executeSplit(tablet);
+              try {
+                executeSplit(tablet);
+              } catch (Throwable t) {
+                log.error("Unexpected exception in {}", Thread.currentThread().getName(), t);
+                log.error("Skipping tablet {}", tablet.getExtent().toString());
+              }
               continue;
             }
 
