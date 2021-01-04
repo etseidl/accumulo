@@ -147,8 +147,9 @@ public final class BCFile {
 
         fsOutputBuffer.setCapacity(getFSOutputBufferSize(conf));
 
-        this.fsBufferedOutput =
-            new SimpleBufferedOutputStream(this.fsOut, fsOutputBuffer.getBytes());
+        this.fsBufferedOutput = TimedIO.isTiming
+            ? new TimedIO.TimedSimpleBufferedOutputStream(this.fsOut, fsOutputBuffer.getBytes())
+            : new SimpleBufferedOutputStream(this.fsOut, fsOutputBuffer.getBytes());
         this.compressor = compressAlgo.getCompressor();
 
         try {

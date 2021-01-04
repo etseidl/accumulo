@@ -246,7 +246,8 @@ public final class Compression {
       protected CompressionCodec createNewCodec(final int bufferSize) {
         Configuration newConfig = new Configuration(conf);
         updateBuffer(conf, BUFFER_SIZE_OPT, bufferSize);
-        DefaultCodec newCodec = new DefaultCodec();
+        DefaultCodec newCodec =
+            (TimedIO.isTiming) ? new TimedIO.TimedGZCodec() : new DefaultCodec();
         newCodec.setConf(newConfig);
         return newCodec;
       }
@@ -342,7 +343,8 @@ public final class Compression {
        */
       @Override
       protected CompressionCodec createNewCodec(final int bufferSize) {
-        return createNewCodec(CONF_SNAPPY_CLASS, DEFAULT_CLAZZ, bufferSize, BUFFER_SIZE_OPT);
+        String defaultClazz = TimedIO.isTiming ? TimedIO.TIMED_SNAPPY_CODEC : DEFAULT_CLAZZ;
+        return createNewCodec(CONF_SNAPPY_CLASS, defaultClazz, bufferSize, BUFFER_SIZE_OPT);
       }
 
       @Override
@@ -412,7 +414,8 @@ public final class Compression {
        */
       @Override
       protected CompressionCodec createNewCodec(final int bufferSize) {
-        return createNewCodec(CONF_ZSTD_CLASS, DEFAULT_CLAZZ, bufferSize, BUFFER_SIZE_OPT);
+        String defaultClazz = TimedIO.isTiming ? TimedIO.TIMED_ZSTD_CODEC : DEFAULT_CLAZZ;
+        return createNewCodec(CONF_ZSTD_CLASS, defaultClazz, bufferSize, BUFFER_SIZE_OPT);
       }
 
       @Override
@@ -635,7 +638,9 @@ public final class Compression {
         }
       }
       CompressionInputStream cis = codec.createInputStream(stream, decompressor);
-      return new BufferedInputStream(cis, DATA_IBUF_SIZE);
+      return TimedIO.isTiming
+          ? new BufferedInputStream(new TimedIO.TimedDecompressionStream(cis), DATA_IBUF_SIZE)
+          : new BufferedInputStream(cis, DATA_IBUF_SIZE);
     }
 
     /**
@@ -646,7 +651,10 @@ public final class Compression {
         final Compressor compressor, final int downStreamBufferSize) throws IOException {
       OutputStream out = bufferStream(downStream, downStreamBufferSize);
       CompressionOutputStream cos = getCodec().createOutputStream(out, compressor);
-      return new BufferedOutputStream(new FinishOnFlushCompressionStream(cos), DATA_OBUF_SIZE);
+      return TimedIO.isTiming
+          ? new BufferedOutputStream(new TimedIO.TimedFinishOnFlushCompressionStream(cos),
+              DATA_OBUF_SIZE)
+          : new BufferedOutputStream(new FinishOnFlushCompressionStream(cos), DATA_OBUF_SIZE);
     }
 
     /**
@@ -666,7 +674,9 @@ public final class Compression {
      */
     InputStream bufferStream(final InputStream stream, final int bufferSize) {
       if (bufferSize > 0) {
-        return new BufferedInputStream(stream, bufferSize);
+        return TimedIO.isTiming
+            ? new BufferedInputStream(new TimedIO.TimedInputStream(stream), bufferSize)
+            : new BufferedInputStream(stream, bufferSize);
       }
       return stream;
     }
