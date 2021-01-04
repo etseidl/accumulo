@@ -104,6 +104,7 @@ import org.apache.accumulo.server.tablets.UniqueNameAllocator;
 import org.apache.accumulo.server.util.FileUtil;
 import org.apache.accumulo.server.util.MasterMetadataUtil;
 import org.apache.accumulo.server.util.MetadataTableUtil;
+import org.apache.accumulo.server.util.Policies;
 import org.apache.accumulo.server.util.ReplicationTableUtil;
 import org.apache.accumulo.tserver.ConditionCheckerContext.ConditionChecker;
 import org.apache.accumulo.tserver.InMemoryMap;
@@ -217,6 +218,8 @@ public class Tablet {
 
   private final Deriver<byte[]> defaultSecurityLabel;
 
+  private final Deriver<Policies> hdfsPolicies;
+
   private long lastMinorCompactionFinishTime = 0;
   private long lastMapFileImportTime = 0;
 
@@ -279,7 +282,7 @@ public class Tablet {
       if (files == null) {
         log.debug("Tablet {} had no dir, creating {}", extent, path);
 
-        getTabletServer().getVolumeManager().mkdirs(path);
+        getTabletServer().getVolumeManager().mkdirs(path, hdfsPolicies.derive());
       }
       checkedTabletDirs.add(path);
     }
@@ -336,6 +339,9 @@ public class Tablet {
           conf -> new ColumnVisibility(conf.get(Property.TABLE_DEFAULT_SCANTIME_VISIBILITY))
               .getExpression());
     }
+
+    hdfsPolicies = tableConfiguration
+        .newDeriver(conf -> Policies.getPoliciesForTable((TableConfiguration) conf));
 
     tabletMemory = new TabletMemory(this);
 

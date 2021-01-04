@@ -29,8 +29,10 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.apache.accumulo.core.Constants;
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import com.google.common.base.Preconditions;
 
@@ -135,7 +137,14 @@ public enum PropertyType {
   BOOLEAN("boolean", in(false, null, "true", "false"),
       "Has a value of either 'true' or 'false' (case-insensitive)"),
 
-  URI("uri", x -> true, "A valid URI");
+  URI("uri", x -> true, "A valid URI"),
+
+  STORAGE_POLICY("storage policy",
+      in(true, HdfsConstants.HOT_STORAGE_POLICY_NAME, HdfsConstants.COLD_STORAGE_POLICY_NAME,
+          HdfsConstants.WARM_STORAGE_POLICY_NAME, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME,
+          HdfsConstants.ONESSD_STORAGE_POLICY_NAME, HdfsConstants.MEMORY_STORAGE_POLICY_NAME,
+          Constants.PROVIDED_STORAGE_POLICY_NAME),
+      "One of 'HOT', 'COLD', 'WARM', 'ALLSSD', 'ONESSD', 'LAZY_PERSIST', or 'PROVIDED'");
 
   private String shortname, format;
   // Field is transient because enums are Serializable, but Predicates aren't necessarily,
