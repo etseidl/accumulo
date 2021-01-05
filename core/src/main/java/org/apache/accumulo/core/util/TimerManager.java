@@ -18,6 +18,8 @@
  */
 package org.apache.accumulo.core.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.File;
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -40,10 +42,8 @@ public class TimerManager {
   // set on command line: -Daccumulo.timing=true
   private static final boolean timing;
 
-  static {
-    var t = System.getProperty("accumulo.timing", "false").trim();
-    timing = t.equalsIgnoreCase("true");
-
+  @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "search paths provided by admin")
+  private static void loadLib() {
     if (timing) {
       String envAccumuloHome = System.getenv("ACCUMULO_HOME");
       File nativeDir = new File(envAccumuloHome + "/lib/native");
@@ -57,6 +57,13 @@ public class TimerManager {
         throw e;
       }
     }
+  }
+
+  static {
+    var t = System.getProperty("accumulo.timing", "false").trim();
+    timing = t.equalsIgnoreCase("true");
+
+    loadLib();
   }
 
   public static boolean isTiming() {
