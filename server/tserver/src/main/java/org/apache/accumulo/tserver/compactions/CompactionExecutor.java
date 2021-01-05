@@ -33,6 +33,7 @@ import java.util.function.Consumer;
 import org.apache.accumulo.core.spi.compaction.CompactionExecutorId;
 import org.apache.accumulo.core.spi.compaction.CompactionJob;
 import org.apache.accumulo.core.spi.compaction.CompactionServiceId;
+import org.apache.accumulo.core.util.ExecutionSampler;
 import org.apache.accumulo.core.util.NamingThreadFactory;
 import org.apache.accumulo.core.util.compaction.CompactionJobPrioritizer;
 import org.apache.accumulo.core.util.ratelimit.RateLimiter;
@@ -87,7 +88,12 @@ public class CompactionExecutor {
       try {
         if (status.compareAndSet(Status.QUEUED, Status.RUNNING)) {
           queuedTask.remove(this);
-          compactable.compact(csid, getJob(), readLimiter, writeLimiter);
+          try (var sampler =
+              ExecutionSampler.sample("compact " + compactable.getExtent().toString())) {
+            compactable.compact(csid, getJob(), readLimiter, writeLimiter);
+            sampler.stop();
+            sampler.dumpSamples();
+          }
           completionCallback.accept(compactable);
         }
       } catch (Exception e) {

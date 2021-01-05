@@ -51,6 +51,9 @@ import org.apache.accumulo.core.spi.compaction.CompactionJob;
 import org.apache.accumulo.core.spi.compaction.CompactionKind;
 import org.apache.accumulo.core.spi.compaction.CompactionServiceId;
 import org.apache.accumulo.core.spi.compaction.CompactionServices;
+import org.apache.accumulo.core.trace.TraceUtil;
+import org.apache.accumulo.core.util.RegionTimer;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.core.util.compaction.CompactionJobImpl;
 import org.apache.accumulo.core.util.ratelimit.RateLimiter;
 import org.apache.accumulo.server.ServiceEnvironmentImpl;
@@ -59,6 +62,9 @@ import org.apache.accumulo.tserver.compactions.Compactable;
 import org.apache.accumulo.tserver.compactions.CompactionManager;
 import org.apache.accumulo.tserver.mastermessage.TabletStatusMessage;
 import org.apache.accumulo.tserver.tablet.Compactor.CompactionCanceledException;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.ProbabilitySampler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -540,7 +546,28 @@ public class CompactableImpl implements Compactable {
   @Override
   public void compact(CompactionServiceId service, CompactionJob job, RateLimiter readLimiter,
       RateLimiter writeLimiter) {
+    double tracePercent =
+        tablet.getTabletServer().getConfiguration().getFraction(Property.TSERV_MAJC_TRACE_PERCENT);
+    ProbabilitySampler sampler = TraceUtil.probabilitySampler(tracePercent);
+    RegionTimer regtimer = TimerManager.timerForThread();
+    regtimer.enter("Tablet:majorCompact");
+    try (TraceScope span = Trace.startSpan("majorCompaction", sampler)) {
+      compact_(service, job, readLimiter, writeLimiter);
+      regtimer.exit("Tablet:majorCompact");
+      if (span.getSpan() != null) {
+        span.getSpan().addKVAnnotation("extent", ("" + getExtent()));
+        if (TimerManager.isTiming()) {
+          span.getSpan().addKVAnnotation("timing", regtimer.toJSON());
+        }
+      }
+    } finally {
+      // clean up timer stuff
+      TimerManager.removeTimerForThread();
+    }
+  }
 
+  private void compact_(CompactionServiceId service, CompactionJob job, RateLimiter readLimiter,
+      RateLimiter writeLimiter) {
     Set<StoredTabletFile> jobFiles = job.getFiles().stream()
         .map(cf -> ((CompactableFileImpl) cf).getStortedTabletFile()).collect(Collectors.toSet());
 
@@ -641,6 +668,8 @@ public class CompactableImpl implements Compactable {
     }
 
     StoredTabletFile metaFile = null;
+    RegionTimer regtimer = TimerManager.timerForThread();
+    regtimer.enter("Tablet:compactFiles");
     try {
 
       TabletLogger.compacting(getExtent(), job, localCompactionCfg);
@@ -658,6 +687,8 @@ public class CompactableImpl implements Compactable {
       metaFile = null;
       throw new RuntimeException(e);
     } finally {
+      regtimer.exit("Tablet:compactFiles");
+
       synchronized (this) {
         Preconditions.checkState(allCompactingFiles.removeAll(jobFiles));
         Preconditions.checkState(runnningJobs.remove(job));

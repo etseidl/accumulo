@@ -85,7 +85,9 @@ import org.apache.accumulo.core.tabletserver.log.LogEntry;
 import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.Pair;
+import org.apache.accumulo.core.util.RegionTimer;
 import org.apache.accumulo.core.util.ShutdownUtil;
+import org.apache.accumulo.core.util.TimerManager;
 import org.apache.accumulo.core.volume.Volume;
 import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.ServerContext;
@@ -778,19 +780,26 @@ public class Tablet {
     try {
       Thread.currentThread().setName("Minor compacting " + this.extent);
       CompactionStats stats;
+      RegionTimer regtimer = TimerManager.timerForThread();
+      regtimer.enter("minorCompact:write");
       try (TraceScope span = Trace.startSpan("write")) {
         count = memTable.getNumEntries();
 
         MinorCompactor compactor = new MinorCompactor(tabletServer, this, memTable, tmpDatafile,
             mincReason, tableConfiguration);
         stats = compactor.call();
+      } finally {
+        regtimer.exit("minorCompact:write");
       }
 
+      regtimer.enter("minorCompact:bringOnline");
       try (TraceScope span = Trace.startSpan("bringOnline")) {
         var storedFile = getDatafileManager().bringMinorCompactionOnline(tmpDatafile, newDatafile,
             new DataFileValue(stats.getFileSize(), stats.getEntriesWritten()), commitSession,
             flushId);
         compactable.filesAdded(true, List.of(storedFile));
+      } finally {
+        regtimer.exit("minorCompact:bringOnline");
       }
 
       return new DataFileValue(stats.getFileSize(), stats.getEntriesWritten());
