@@ -18,11 +18,11 @@
  */
 package org.apache.accumulo.core.util;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.io.File;
 import java.io.PrintStream;
 import java.util.HashMap;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 // singleton to manage per-thread RegionTimer instances.  kind of
 // annoying that I have to use HashMap (modernizer complained about
