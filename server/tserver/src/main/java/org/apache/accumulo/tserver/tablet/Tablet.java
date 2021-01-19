@@ -395,7 +395,7 @@ public class Tablet {
           }
         }
 
-      } catch (Throwable t) {
+      } catch (Exception t) {
         String msg = "Error recovering tablet " + extent + " from log files";
         if (tableConfiguration.getBoolean(Property.TABLE_FAILURES_IGNORE)) {
           log.warn(msg, t);
@@ -810,7 +810,7 @@ public class Tablet {
       Thread.currentThread().setName(oldName);
       try {
         getTabletMemory().finalizeMinC();
-      } catch (Throwable t) {
+      } catch (Exception t) {
         log.error("Failed to free tablet memory on {}", extent, t);
       }
 
@@ -1313,7 +1313,7 @@ public class Tablet {
 
     try {
       getTabletMemory().getMemTable().delete(0);
-    } catch (Throwable t) {
+    } catch (Exception t) {
       log.error("Failed to delete mem table : " + t.getMessage() + " for tablet " + extent, t);
     }
 
